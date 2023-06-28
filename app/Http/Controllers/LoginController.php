@@ -8,7 +8,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use App\Library\GoogleVerify;
 use Validator;
-   
+
+use function PHPUnit\Framework\isEmpty;
+
 class LoginController extends BaseController
 {
     
@@ -45,12 +47,14 @@ class LoginController extends BaseController
     public function login(Request $request)
     {
         $googleverify = new GoogleVerify;
-        $jsonGoogle = $googleverify->check($request['token'], env('GOOGLE_KEY_SECRET'));
-        if (!$jsonGoogle->success)
-        {
-            return response()->json([
-                'message' => 'Invalid gLogin details'
-            ], 401);
+        if ( env('GOOGLE_KEY_SECRET') != null ) {
+            $jsonGoogle = $googleverify->check($request['token'], env('GOOGLE_KEY_SECRET'));
+            if (!$jsonGoogle->success)
+            {
+                return response()->json([
+                    'message' => 'Invalid gLogin details'
+                ], 401);
+            }
         }
         if (!Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
