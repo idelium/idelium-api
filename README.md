@@ -40,3 +40,7 @@ The database configuration is described in .env file, and this moment is configu
 
 
 For any help write to: [https://idelium.io/#contact](https://idelium.io/#contact)
+
+## Demo
+
+[https://github.com/idelium/idelium-docker](https://github.com/idelium/idelium-docker)
