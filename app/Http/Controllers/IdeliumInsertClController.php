@@ -23,7 +23,7 @@ class IdeliumInsertClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (isEmpty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_DETAILS], 401);
         }
         $this->validate($request, [
@@ -47,7 +47,7 @@ class IdeliumInsertClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (isEmpty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_DETAILS], 401);
         }
 
@@ -73,7 +73,7 @@ class IdeliumInsertClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (isEmpty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_DETAILS], 401);
         }
         $this->validate($request, [
@@ -93,7 +93,7 @@ class IdeliumInsertClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (isEmpty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_DETAILS], 401);
         }
 
