@@ -8,7 +8,7 @@ Once you have configured what you want to test, you are ready to run your test u
 
 For more info: [https://idelium.io](https://idelium.io)
 
-## idelium-api
+## Prerequisite
 
 Idelium-api is the server component of Idelium. To install it in your environment, you need to have the following prerequisites:
 
