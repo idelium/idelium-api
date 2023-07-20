@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Costumer;
+use App\Library\ApiKey;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,11 +11,6 @@ use Illuminate\Support\Facades\Auth;
 class CostumerController extends Controller
 {
 
-    private function generateApiSignature()
-    {
-        $signature = bin2hex(random_bytes(64));
-        return base64_encode($signature);
-    }
     public function index(Request $request)
     {
         if (Auth::user()->role != 1) {
@@ -30,11 +26,12 @@ class CostumerController extends Controller
             'costumer' => 'required',
         ]);
         $startDate = time();
+        $apiKey= new ApiKey;
         $costumer = new Costumer;
         $costumer->costumer = strtoupper($request->input('costumer'));
         $costumer->description = strtoupper($request->input('description'));
         $costumer->licenseExpiration = date('Y-m-d H:i:s', strtotime('+365 day', $startDate));
-        $costumer->apiKey = $this->generateApiSignature();
+        $costumer->apiKey = $apiKey->generateApiSignature();
         $costumer->logo = "[]";
         $costumer->save();
         return $this->index($request);
@@ -66,8 +63,9 @@ class CostumerController extends Controller
         if (Auth::user()->role > 2) {
             return response()->json('ok');
         }
+        $apiKey=new apiKey;
         $costumer = Costumer::findorFail(Auth::user()->idCostumer);
-        $costumer->apiKey = $this->generateApiSignature($costumer->costumer);
+        $costumer->apiKey = $apiKey->generateApiSignature();
         $costumer->save();
         return array('apiKey' => $costumer->apiKey);
     }
