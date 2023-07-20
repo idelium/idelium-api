@@ -24,11 +24,11 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer)) {
+        if (count($costumer) !=1 ) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         $query = TestCycle::where('id', $idTestCycle)->get();
-        if (empty($query)) {
+        if (count($query)!=1) {
             return response()->json([
                 'message'=> self::INVALID_ID
             ], 502);
@@ -40,13 +40,13 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         $query = Test::where('id', $idTest)
             ->where('idCostumer', $costumer[0]->id)
             ->get();
-        if (!empty($query)) {
+        if (count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
             ], 502);
@@ -58,13 +58,13 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         $query = Step::where('id', $idStep)
             ->where('idCostumer', $costumer[0]->id)
             ->get();
-        if (!empty($query)) {
+        if (count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
             ], 502);
@@ -77,7 +77,7 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer))
+        if (count($costumer)  !=  1)
         {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
@@ -106,7 +106,7 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         return Environment::where('idProject', $idProject)
@@ -118,13 +118,13 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (empty($costumer)) {
+        if (count($costumer)  !=  1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         $query = Environment::where('id', $idEnvironment)
             ->where('idCostumer', $costumer[0]->id)
             ->get();
-        if (!empty($query)) {
+        if ( count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
             ], 502);
