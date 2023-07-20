@@ -7,6 +7,7 @@ use App\Library\ApiKey;
 use App\Models\User;
 use App\Models\Costumer;
 use App\Models\Project;
+use App\Models\Environment;
 
 class DemoProfileSeeder extends Seeder
 {
@@ -36,6 +37,14 @@ class DemoProfileSeeder extends Seeder
         Project::create([
             'name' => 'demo',
             'description' => 'Demo Project',
+            'idCostumer' => 1,
+        ]);
+        
+        Environment::create([
+            'code' => 'demo',
+            'description' => 'Demo Environment',
+            'config' => "{\"base_url\":\"\",\"url\":\"\",\"xpath_check_url\":\"\",\"userAgent\":\"\",\"browser\":\"chrome\",\"accept_self_certificate\":true}",
+            'idProject' => 1,
             'idCostumer' => 1,
         ]);
 
