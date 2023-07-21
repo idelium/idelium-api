@@ -31,7 +31,7 @@ launch this commands:
 
 ## Configuration
 
-Idelium Api is develoed in php with Laravel 8.1 for the FE u can use Apache o Nginx:
+Idelium Api is develoed in php with Laravel 8.1 for the FE you can use Apache or Nginx:
 
 [https://laravel.com/docs/5.0/configuration#pretty-urls](https://laravel.com/docs/5.0/configuration#pretty-urls)
 
