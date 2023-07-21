@@ -122,7 +122,7 @@
       "value": ""
     }, {
       "id": "5ed41bbb-fe73-49f9-aeee-0d04a965788c",
-      "comment": "",
+      "comment": "Click on dropdown for show the options",
       "command": "click",
       "target": "css=li:nth-child(2) .text",
       "targets": [
@@ -134,7 +134,7 @@
       "value": ""
     }, {
       "id": "67e89131-37be-452d-a136-e10ccd889733",
-      "comment": "select the right field",
+      "comment": "select \"Ask for a Free Trial\" option",
       "command": "select",
       "target": "name=discuss",
       "targets": [],
