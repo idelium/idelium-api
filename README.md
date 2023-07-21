@@ -28,7 +28,6 @@ launch this commands:
     composer install
     php artisan migrate
     php artisan db:seed
-    rm idelium.ok
 
 ## Configuration
 
