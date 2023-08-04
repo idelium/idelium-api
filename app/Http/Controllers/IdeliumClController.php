@@ -90,11 +90,11 @@ class IdeliumClController extends Controller
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
-        if (count($costumer) == 0) {
+        if (count($costumer) != 1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
         $query = Plugin::where('id', $idStep)->get();
-        if (!empty($query) > 0) {
+        if (count($query) == 0) {
             return response()->json([
                 'message'=> self::INVALID_ID
             ], 502);
