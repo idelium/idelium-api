@@ -1,0 +1,192 @@
+{
+  "id": "925185c5-4aae-4d05-a045-6fa96aceffc6",
+  "version": "2.0",
+  "name": "Idelium test",
+  "url": "https://www.idelium.io",
+  "tests": [{
+    "id": "82fa0fbb-f29d-4e9f-9b86-7e4fafaa6ae1",
+    "name": "test",
+    "commands": [{
+      "id": "130ad811-420b-474a-b0f2-a5ef90d03bb1",
+      "comment": "Open the browser",
+      "command": "open",
+      "target": "/",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "77d962aa-a2ae-44ac-8ff7-ade7effcf6bb",
+      "comment": "",
+      "command": "setWindowSize",
+      "target": "2734x1373",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "685b1c3a-2cbc-4071-bea8-46b507cecad2",
+      "comment": "Click on contact",
+      "command": "click",
+      "target": "linkText=Contact",
+      "targets": [
+        ["linkText=Contact", "linkText"],
+        ["css=.original .scrollToLink:nth-child(4) > a", "css:finder"],
+        ["xpath=//a[contains(text(),'Contact')]", "xpath:link"],
+        ["xpath=//div[@id='__layout']/div/div/header/nav/div/div[2]/ul/li[4]/a", "xpath:idRelative"],
+        ["xpath=//a[contains(@href, '/#contact')]", "xpath:href"],
+        ["xpath=//li[4]/a", "xpath:position"],
+        ["xpath=//a[contains(.,'Contact')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "7578205e-1134-4997-a72a-9dfd75397fc2",
+      "comment": "Click on name field",
+      "command": "click",
+      "target": "name=name",
+      "targets": [
+        ["name=name", "name"],
+        ["css=.col-md-6:nth-child(3) > input", "css:finder"],
+        ["xpath=//input[@name='name']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[3]/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "ae538b1f-00ec-402b-b12d-bacdba0664d3",
+      "comment": "Write value for User field",
+      "command": "type",
+      "target": "name=name",
+      "targets": [
+        ["name=name", "name"],
+        ["css=.isValid", "css:finder"],
+        ["xpath=//input[@name='name']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[3]/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": "Demo User"
+    }, {
+      "id": "389a9f2a-3ec9-489c-ab63-a49818f27a83",
+      "comment": "Write the email",
+      "command": "type",
+      "target": "name=email",
+      "targets": [
+        ["name=email", "name"],
+        ["css=.col-md-6:nth-child(4) > .isValid", "css:finder"],
+        ["xpath=//input[@name='email']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[4]/input", "xpath:idRelative"],
+        ["xpath=//div[4]/input", "xpath:position"]
+      ],
+      "value": "demo@idelium.io"
+    }, {
+      "id": "03844e41-5b72-4c57-af7b-756050041a7a",
+      "comment": "Write on subject field",
+      "command": "type",
+      "target": "name=subject",
+      "targets": [
+        ["name=subject", "name"],
+        ["css=.col-md-6:nth-child(5) > .isValid", "css:finder"],
+        ["xpath=//input[@name='subject']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[5]/input", "xpath:idRelative"],
+        ["xpath=//div[5]/input", "xpath:position"]
+      ],
+      "value": "demo"
+    }, {
+      "id": "ef076f5e-adf3-4998-9f96-81f230898441",
+      "comment": "Click on dropdown menu",
+      "command": "click",
+      "target": "css=.filter-option-inner-inner",
+      "targets": [
+        ["css=.filter-option-inner-inner", "css:finder"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[6]/div/button/div/div/div", "xpath:idRelative"],
+        ["xpath=//button/div/div/div", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "3ce6ac1f-9027-4d51-87e5-f615789839fe",
+      "comment": "",
+      "command": "mouseOver",
+      "target": "css=.filter-option-inner-inner",
+      "targets": [
+        ["css=.filter-option-inner-inner", "css:finder"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[6]/div/button/div/div/div", "xpath:idRelative"],
+        ["xpath=//button/div/div/div", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "379d5512-4661-4640-809b-fab41930178f",
+      "comment": "",
+      "command": "mouseOut",
+      "target": "css=.filter-option-inner-inner",
+      "targets": [
+        ["css=.filter-option-inner-inner", "css:finder"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[6]/div/button/div/div/div", "xpath:idRelative"],
+        ["xpath=//button/div/div/div", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "5ed41bbb-fe73-49f9-aeee-0d04a965788c",
+      "comment": "Click on dropdown for show the options",
+      "command": "click",
+      "target": "css=li:nth-child(2) .text",
+      "targets": [
+        ["css=li:nth-child(2) .text", "css:finder"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[6]/div/div/div/ul/li[2]/a/span", "xpath:idRelative"],
+        ["xpath=//li[2]/a/span", "xpath:position"],
+        ["xpath=//span[contains(.,'Ask for a Free Trial')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "67e89131-37be-452d-a136-e10ccd889733",
+      "comment": "select \"Ask for a Free Trial\" option",
+      "command": "select",
+      "target": "name=discuss",
+      "targets": [],
+      "value": "label=Ask for a Free Trial"
+    }, {
+      "id": "07e9079d-dc24-42e9-bf43-82e5bb51b256",
+      "comment": "",
+      "command": "click",
+      "target": "name=message",
+      "targets": [
+        ["name=message", "name"],
+        ["css=textarea:nth-child(1)", "css:finder"],
+        ["xpath=//textarea[@name='message']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[7]/textarea", "xpath:idRelative"],
+        ["xpath=//textarea", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "908c4b67-f6dc-463b-9fb5-e0c1aa11b8c3",
+      "comment": "write the message",
+      "command": "type",
+      "target": "name=message",
+      "targets": [
+        ["name=message", "name"],
+        ["css=.col-md-12 > .isValid", "css:finder"],
+        ["xpath=//textarea[@name='message']", "xpath:attributes"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[7]/textarea", "xpath:idRelative"],
+        ["xpath=//textarea", "xpath:position"]
+      ],
+      "value": "this is a demo from idelium test"
+    }, {
+      "id": "ec3801b9-8203-48d7-ae9a-fa1069f7f1eb",
+      "comment": "Click on \"send messge\"",
+      "command": "click",
+      "target": "css=.contact-one__form-btn",
+      "targets": [
+        ["css=.contact-one__form-btn", "css:finder"],
+        ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[7]/button", "xpath:idRelative"],
+        ["xpath=//div[7]/button", "xpath:position"],
+        ["xpath=//button[contains(.,'Send Message')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }]
+  }],
+  "suites": [{
+    "id": "1c2b8ad9-94b0-470c-96d4-68d0deeb4a13",
+    "name": "Default Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": ["82fa0fbb-f29d-4e9f-9b86-7e4fafaa6ae1"]
+  }],
+  "urls": ["https://www.idelium.io/"],
+  "plugins": []
+}
