@@ -13,7 +13,7 @@ For more info: [https://idelium.io](https://idelium.io)
 Idelium-api is the server component of Idelium. To install it in your environment, you need to have the following prerequisites:
 
 1. Apache 2.4 ([https://httpd.apache.org/](https://httpd.apache.org/))
-2. PHP 8.1 ([https://www.php.net/](https://www.php.net/))
+2. PHP 8.2 ([https://www.php.net/](https://www.php.net/))
 3. composer 2.x ([https://getcomposer.org/](https://getcomposer.org/))
 4. Database: 
 	*  	MySQL
