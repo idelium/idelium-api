@@ -1,4 +1,7 @@
 <?php
+/* strange issue .env file not being read */
+$dotenv = Dotenv\Dotenv::createImmutable(__DIR__.'/../');
+$dotenv->load();
 
 /*
 |--------------------------------------------------------------------------

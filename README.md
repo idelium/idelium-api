@@ -25,9 +25,11 @@ Idelium-api is the server component of Idelium. To install it in your environmen
 
 launch this commands:
 
+	cp env.docker to .env
     composer install
     php artisan migrate
     php artisan db:seed
+	php artisan key:generate
 
 ## Configuration
 
