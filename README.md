@@ -4,44 +4,56 @@
 
 Idelium AS is the tool that allows you to configure your tests. You can define your project, define your steps, compose your testcase.
 
-Once you have configured what you want to test, you are ready to run your test using idelium-cli.
+Once you have configured what you want to test, you are ready to run your test using [idelium-cli](https://github.com/idelium/idelium-cli).
 
-For more info: [https://idelium.io](https://idelium.io)
+For more info: https://idelium.io
+## idelium-docker
+
+idelium-docker is a docker project to start Idelium AS locally, as a pre-requisite you must have docker on your machine (https://www.docker.com/)
+
+It is made up of three containers:
+
+1) idelium-fe (front end)
+
+2) idelium-be (web api)
+
+3) idelium-db (db server)
 
 ## Prerequisite
 
-Idelium-api is the server component of Idelium. To install it in your environment, you need to have the following prerequisites:
+Install Docker from [https://www.docker.com/](https://www.docker.com/)
 
-1. Apache 2.4 ([https://httpd.apache.org/](https://httpd.apache.org/))
-2. PHP 8.2 ([https://www.php.net/](https://www.php.net/))
-3. composer 2.x ([https://getcomposer.org/](https://getcomposer.org/))
-4. Database: 
-	*  	MySQL
-	*   PostgeAQL,
-	*   SQLite
-	*   SQLServer 
+## Download idelium-docker
 
-## Installation of Idelium Api
+```
+git clone https://github.com/idelium/idelium-docker.git
+```
 
-launch this commands:
+To launch the server  and configure it correctly is very simple, just run these two commands:
 
-	cp env.docker to .env
-    composer install
-    php artisan migrate
-    php artisan db:seed
-	php artisan key:generate
+```
+cd idelium-docker
+./start-idelium.sh
+```
 
-## Configuration
+## Login
 
-Idelium Api is develoed in php with Laravel 8.1 for the FE you can use Apache or Nginx:
+Open your browser and launch:
 
-[https://laravel.com/docs/5.0/configuration#pretty-urls](https://laravel.com/docs/5.0/configuration#pretty-urls)
+https://localhost
 
-The database configuration is described in .env file, and this moment is configured to work into docker ([https://github.com/idelium/idelium-docker](https://github.com/idelium/idelium-docker))
+### Credentials
 
+To log in to the system, enter the following credentials:
 
-For any help write to: [https://idelium.io/#contact](https://idelium.io/#contact)
+username: demo@idelium.io
 
-## Demo
+password: demo
 
-[https://github.com/idelium/idelium-docker](https://github.com/idelium/idelium-docker)
+## Quick Start
+
+[https://github.com/idelium/idelium-docker/wiki/Quick-Start-Selenium](https://github.com/idelium/idelium-docker/wiki/Quick-Start-Selenium)
+
+or
+
+[https://github.com/idelium/idelium-docker/wiki/Quick-Start-Test-API-Using-Postman](https://github.com/idelium/idelium-docker/wiki/Quick-Start-Test-API-Using-Postman)
