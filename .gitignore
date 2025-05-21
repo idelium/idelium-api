@@ -14,3 +14,6 @@ npm-debug.log
 yarn-error.log
 /.idea
 /.vscode
+idelium-fe/certs/server.crt
+idelium-fe/certs/server.csr
+idelium-fe/certs/server.key
