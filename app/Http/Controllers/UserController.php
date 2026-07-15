@@ -7,6 +7,8 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -32,29 +34,34 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        if (Auth::user()->role > 2) {
-            return response()->json('ok');
+        $authenticatedUser = Auth::user();
+        if ((int) $authenticatedUser->role > 2) {
+            abort(403);
         }
-        $this->validate($request, [
+
+        $validated = $this->validate($request, [
             'name' => 'required',
             'password' => 'required|string|min:8',
-            'email' => 'required',
-            'role' => 'required',
+            'email' => 'required|email|unique:users,email',
+            'role' => 'required|integer|exists:roles,id',
+            'idCostumer' => [
+                Rule::requiredIf((int) $authenticatedUser->role === 1),
+                'nullable',
+                'integer',
+                'exists:costumers,id',
+            ],
         ]);
+
         $user = new User;
-        if (Auth::user()->role != 1 && $user->role == 1) {
-            return response()->json('ok');
-        }
-        $user->name = $request->input('name');
-        $user->password = bcrypt($request->input('password'));
-        $user->email = $request->input('email');
-        $user->role = $request->input('role');
-        if (Auth::user()->role != 1) {
-            $user->idCostumer = Auth::user()->idCostumer;
-        } else {
-            $user->idCostumer = $request->input('idCostumer');
-        }
+        $user->name = $validated['name'];
+        $user->password = bcrypt($validated['password']);
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        $user->idCostumer = $validated['idCostumer'] ?? $authenticatedUser->idCostumer;
+
+        Gate::authorize('createAccount', $user);
         $user->save();
+
         return $this->index($request);
     }
 
@@ -86,36 +93,37 @@ class UserController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (Auth::user()->role > 2) {
-            return response()->json('ok');
+        $authenticatedUser = Auth::user();
+        if ((int) $authenticatedUser->role > 2) {
+            abort(403);
         }
-        $this->validate($request, [
+
+        $validated = $this->validate($request, [
           'name' => 'required',
-          'password' => 'required',
+          'password' => 'required|string|min:8',
         ]);
-        $user = User::findorFail($id);
-        if (Auth::user()->role != 1 && ($user->role == 1 ||
-            ($user->idCostumer != Auth::user()->idCostumer))) {
-                return response()->json('ok');
-        }
-        $user->name = $request->input('name');
-        $user->password = bcrypt($request->input('password'));
+
+        $user = $this->accountForMutation($authenticatedUser, $id);
+        Gate::authorize('update', $user);
+        $user->name = $validated['name'];
+        $user->password = bcrypt($validated['password']);
         $user->save();
+
         return $this->index($request);
     }
+
     public function destroy(Request $request, $id)
     {
-        if (Auth::user()->role > 2) {
-            return response()->json('ok');
+        $authenticatedUser = Auth::user();
+        if ((int) $authenticatedUser->role > 2) {
+            abort(403);
         }
-        $user = User::findorFail($id);
-        if (Auth::user()->role != 1 && ($user->role==1 ||
-                                    ($user->idCostumer != Auth::user()->idCostumer))) {
-                                        return response()->json('ok');
-                                    }
-        if ($user->delete()) {
-            return $this->index($request);
-        }
+
+        $user = $this->accountForMutation($authenticatedUser, $id);
+        Gate::authorize('delete', $user);
+        $user->delete();
+
+        return $this->index($request);
     }
 
     private function accountQuery(): Builder
@@ -132,5 +140,17 @@ class UserController extends Controller
                 'costumers.costumer',
                 'roles.name as roleName',
             ]);
+    }
+
+    private function accountForMutation(User $authenticatedUser, $id): User
+    {
+        $query = User::whereKey($id);
+
+        if ((int) $authenticatedUser->role !== 1) {
+            $query->where('idCostumer', $authenticatedUser->idCostumer)
+                ->where('role', '>', 1);
+        }
+
+        return $query->firstOrFail();
     }
 }
