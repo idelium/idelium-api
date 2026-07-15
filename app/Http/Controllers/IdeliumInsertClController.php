@@ -81,7 +81,12 @@ class IdeliumInsertClController extends Controller
             'status' => 'required',
         ]);
 
-        $test = PerformedTest::findorFail($request->input('testId'));
+        $test = PerformedTest::where('id', $request->input('testId'))
+            ->where('idCostumer', $costumer[0]->id)
+            ->first();
+        if ($test === null) {
+            return response()->json(['message' => self::INVALID_DETAILS], 404);
+        }
         $test->status = $request->input('status');
         $test->save();
         return response()->json([
@@ -136,7 +141,12 @@ class IdeliumInsertClController extends Controller
             'stepId' => 'required',
             'screenshots' => 'required',
         ]);
-        $step = PerformedStep::findorFail($request->input('stepId'));
+        $step = PerformedStep::where('id', $request->input('stepId'))
+            ->where('idCostumer', $costumer[0]->id)
+            ->first();
+        if ($step === null) {
+            return response()->json(['message' => self::INVALID_DETAILS], 404);
+        }
         $step->screenshots = $request->input('screenshots');
         $step->save();
         return response()->json([

@@ -27,11 +27,13 @@ class IdeliumClController extends Controller
         if (count($costumer) !=1 ) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
-        $query = TestCycle::where('id', $idTestCycle)->get();
+        $query = TestCycle::where('id', $idTestCycle)
+            ->where('idCostumer', $costumer[0]->id)
+            ->get();
         if (count($query)!=1) {
             return response()->json([
                 'message'=> self::INVALID_ID
-            ], 502);
+            ], 404);
         }
         return $query[0];
     }
@@ -86,18 +88,20 @@ class IdeliumClController extends Controller
             ->get();
     }
 
-    public function getPlugin(Request $request, $idStep)
+    public function getPlugin(Request $request, $idPlugin)
     {
         $key =  $request->header('Idelium-Key');
         $costumer = $this->checkApiKey($key);
         if (count($costumer) != 1) {
             return response()->json(['message' => self::INVALID_KEY], 401);
         }
-        $query = Plugin::where('id', $idStep)->get();
+        $query = Plugin::where('id', $idPlugin)
+            ->where('idCostumer', $costumer[0]->id)
+            ->get();
         if (count($query) == 0) {
             return response()->json([
                 'message'=> self::INVALID_ID
-            ], 502);
+            ], 404);
         }
         return $query[0];
     }
