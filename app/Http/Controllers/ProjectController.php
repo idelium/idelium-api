@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
 use App\Models\Environment;
-use App\Models\Plugin;
-use App\Models\Step;
-use App\Models\Test;
-use App\Models\TestCycle;
 use App\Models\PerformedStep;
 use App\Models\PerformedTest;
 use App\Models\PerformedTestCycle;
+use App\Models\Plugin;
+use App\Models\Project;
+use App\Models\Step;
+use App\Models\Test;
+use App\Models\TestCycle;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-
-use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
@@ -38,6 +37,7 @@ class ProjectController extends Controller
         $project->description = $request->input('description');
         $project->idCostumer = Auth::user()->idCostumer;
         $project->save();
+
         return $this->index($request);
     }
 
@@ -47,8 +47,9 @@ class ProjectController extends Controller
             ->where('idCostumer', Auth::user()->idCostumer)
             ->get();
         if (count($row) == 1) {
-            return  $row[0];
+            return $row[0];
         }
+
         return response()->json(['message' => self::INVALID_DETAILS], 555);
     }
 
@@ -59,14 +60,14 @@ class ProjectController extends Controller
             'description' => 'required',
         ]);
 
-
         $project = Project::findorFail($id);
         if ($project->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         $project->name = $request->input('name');
         $project->description = $request->input('description');
         $project->save();
+
         return $this->index($request);
     }
 

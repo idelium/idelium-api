@@ -16,7 +16,7 @@ class CreateVersionBrowsersTable extends Migration
         Schema::create('version_browsers', function (Blueprint $table) {
             $table->id();
             $table->string('version');
-            $table->integer('idBrowser');        
+            $table->integer('idBrowser');
             $table->timestamps();
         });
     }

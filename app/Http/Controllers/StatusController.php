@@ -10,11 +10,10 @@ class StatusController extends Controller
 {
     public function index(Request $request)
     {
-        if (Auth::user()->role != 1)
-        {
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return Status::select('id', 'name')->get();
     }
-
 }

@@ -14,6 +14,7 @@ class PlatformController extends Controller
         if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return Platform::where('type', '=', $type)
             ->orderBy('osDescription', 'asc')
             ->get();
@@ -38,7 +39,7 @@ class PlatformController extends Controller
         }
         $platform = new Platform;
         $platform->type = $request->input('type');
-        $platform->hostname = 'https://' . $request->input('addressname') . ':' . env('IDELIUM_CL_PORT');
+        $platform->hostname = 'https://'.$request->input('addressname').':'.env('IDELIUM_CL_PORT');
         $platform->location = $request->input('location');
         $platform->os = $request->input('os');
         $platform->osversion = $request->input('osversion');
@@ -49,6 +50,7 @@ class PlatformController extends Controller
         $platform->browserDescription = $request->input('browserDescription');
         $platform->status = 1;
         $platform->save();
+
         return $this->index($request, $request->input('type'));
     }
 
@@ -67,6 +69,7 @@ class PlatformController extends Controller
 
         $platform->status = $request->input('status');
         $platform->save();
+
         return $this->index($request, $request->input('type'));
     }
 

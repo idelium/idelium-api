@@ -18,6 +18,7 @@ class TransactionalMutationTest extends TestCase
     use RefreshDatabase;
 
     private Costumer $customer;
+
     private Project $project;
 
     protected function setUp(): void

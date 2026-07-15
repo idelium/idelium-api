@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Role;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -13,11 +13,11 @@ class RoleController extends Controller
         if (Auth::user()->role > 2) {
             return response()->json('ok');
         }
-        $roles= Role::orderBy('id', 'asc')->get();
+        $roles = Role::orderBy('id', 'asc')->get();
         if (Auth::user()->role == 2) {
-         $roles->shift();
+            $roles->shift();
         }
+
         return $roles;
     }
-
 }

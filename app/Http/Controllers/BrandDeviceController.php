@@ -6,13 +6,13 @@ use App\Models\BrandDevice;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-
 class BrandDeviceController extends Controller
 {
     public function index(Request $request)
     {
         return BrandDevice::get();
     }
+
     public function store(Request $request)
     {
         $this->validate($request, [
@@ -24,6 +24,7 @@ class BrandDeviceController extends Controller
         $brandDevice = new BrandDevice;
         $brandDevice->brand = $request->input('brand');
         $brandDevice->save();
+
         return $this->index($request);
     }
 
@@ -40,6 +41,7 @@ class BrandDeviceController extends Controller
         $brandDevice = BrandDevice::findorFail($request->input('id'));
         $brandDevice->brand = $request->input('brand');
         $brandDevice->save();
+
         return $this->index($request);
     }
 }

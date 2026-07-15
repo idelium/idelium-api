@@ -2,11 +2,11 @@
 
 namespace App\Library;
 
-
 class TestLauncher
 {
-    public function getHeaders($respHeaders) {
-        $headers = array();
+    public function getHeaders($respHeaders)
+    {
+        $headers = [];
 
         $headerText = substr($respHeaders, 0, strpos($respHeaders, "\r\n\r\n"));
 
@@ -14,25 +14,26 @@ class TestLauncher
             if ($i === 0) {
                 $headers['http_code'] = $line;
             } else {
-                list ($key, $value) = explode(': ', $line);
+                [$key, $value] = explode(': ', $line);
 
                 $headers[$key] = $value;
             }
         }
 
         return $headers;
-}
-    public function launch($host,$browser,$idTestCycle, $idProject,$environment,$key)
+    }
+
+    public function launch($host, $browser, $idTestCycle, $idProject, $environment, $key)
     {
         $ch = curl_init($host.'/launchtest');
-        $data=array(
-            'idTestCycle'=>$idTestCycle,
+        $data = [
+            'idTestCycle' => $idTestCycle,
             'idProject' => $idProject,
             'environment' => $environment,
-            'browser'=>$browser,
+            'browser' => $browser,
             'key' => $key,
             'host' => $host,
-        );
+        ];
         $data_string = json_encode($data);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_VERBOSE, true);
@@ -44,10 +45,10 @@ class TestLauncher
         curl_setopt(
             $ch,
             CURLOPT_HTTPHEADER,
-            array(
+            [
                 'Content-Type:application/json',
-                'Content-Length: ' . strlen($data_string)
-            )
+                'Content-Length: '.strlen($data_string),
+            ]
         );
         $content = curl_exec($ch);
         $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);

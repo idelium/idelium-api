@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Library\TestLauncher;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Browser;
 use App\Models\Costumer;
 use App\Models\Platform;
-use App\Models\Browser;
-
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TestLauncherController extends Controller
 {
@@ -28,6 +27,7 @@ class TestLauncherController extends Controller
         if (count($costumers) == 1) {
             $apiKey = $costumers[0];
             $launcher = new TestLauncher;
+
             return $launcher->launch(
                 $platform->hostname,
                 $browser->name,
@@ -37,6 +37,7 @@ class TestLauncherController extends Controller
                 $apiKey->apiKey
             );
         }
+
         return response()->json('ko');
     }
 }

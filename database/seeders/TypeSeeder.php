@@ -2,9 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Type;
-
+use Faker\Factory;
+use Illuminate\Database\Seeder;
 
 class TypeSeeder extends Seeder
 {
@@ -18,7 +18,7 @@ class TypeSeeder extends Seeder
         //
         Type::truncate();
 
-        $faker = \Faker\Factory::create();
+        $faker = Factory::create();
 
         Type::create([
             'name' => 'desktop',

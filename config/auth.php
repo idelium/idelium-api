@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\User;
+
 return [
 
     /*
@@ -37,12 +39,12 @@ return [
 
     'guards' => [
         'web' => [
-            //'driver' => 'cognito-session',
+            // 'driver' => 'cognito-session',
             'driver' => 'session',
             'provider' => 'users',
         ],
         'api' => [
-            //'driver' => 'cognito-token',
+            // 'driver' => 'cognito-token',
             'driver' => 'passport',
             'provider' => 'users',
         ],
@@ -68,7 +70,7 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => App\Models\User::class,
+            'model' => User::class,
         ],
 
         // 'users' => [

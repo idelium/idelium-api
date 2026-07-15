@@ -10,10 +10,10 @@ class LocationController extends Controller
 {
     public function index(Request $request)
     {
-        if (Auth::user()->role != 1)
-        {
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return Location::get();
     }
 
@@ -22,13 +22,13 @@ class LocationController extends Controller
         $this->validate($request, [
             'name' => 'required',
         ]);
-        if (Auth::user()->role != 1)
-        {
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
         $location = new Location;
         $location->name = $request->input('name');
         $location->save();
+
         return $this->index($request);
     }
 
@@ -40,11 +40,13 @@ class LocationController extends Controller
             'id' => 'required',
         ]);
         if (Auth::user()->role != 1) {
-            return response()->json('ok');}
+            return response()->json('ok');
+        }
         $location = Location::findorFail($request->input('id'));
 
         $location->name = $request->input('name');
         $location->save();
+
         return $this->index($request);
     }
 }

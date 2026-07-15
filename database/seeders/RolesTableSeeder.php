@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Role;
+use Faker\Factory;
+use Illuminate\Database\Seeder;
 
 class RolesTableSeeder extends Seeder
 {
@@ -12,7 +13,7 @@ class RolesTableSeeder extends Seeder
         // Let's clear the users table first
         Role::truncate();
 
-        $faker = \Faker\Factory::create();
+        $faker = Factory::create();
 
         Role::create([
             'name' => 'superadmin',

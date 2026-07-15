@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\PerformedTestCycle;
 
-
 class PerformedTestCycleController extends Controller
 {
     public function index($id)
@@ -13,5 +12,4 @@ class PerformedTestCycleController extends Controller
             ->orderBy('date', 'DESC')
             ->get();
     }
-
 }

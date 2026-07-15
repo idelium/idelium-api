@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Project;
 use App\Models\Step;
 use App\Models\Test;
-use App\Models\Project;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-
-use Illuminate\Http\Request;
 
 class ImportSeleniumController extends Controller
 {

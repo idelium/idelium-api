@@ -13,8 +13,9 @@ class VersionOsController extends Controller
         if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return VersionOs::where('idOs', '=', $idOs)
-        ->orderBy('version', 'asc')->get();
+            ->orderBy('version', 'asc')->get();
     }
 
     public function store(Request $request)
@@ -31,6 +32,7 @@ class VersionOsController extends Controller
         $osVersion->version = $request->input('version');
         $osVersion->idOs = $request->input('idOs');
         $osVersion->save();
+
         return $this->index($request, $request->input('idOs'));
     }
 
@@ -48,6 +50,7 @@ class VersionOsController extends Controller
         $os = VersionOs::findorFail($request->input('id'));
         $os->version = $request->input('version');
         $os->save();
+
         return $this->index($request, $request->input('idOs'));
     }
 }

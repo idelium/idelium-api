@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Step;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Http\Request;
 
 class StepController extends Controller
 {
     const INVALID_DETAILS = 'Invalid details';
+
     public function index(Request $request, $idProject)
     {
         return Step::select('id', 'name', 'description')
@@ -36,6 +37,7 @@ class StepController extends Controller
         $step->idCostumer = Auth::user()->idCostumer;
         $step->order = 9999999;
         $step->save();
+
         return $this->index($request, $request->input('idProject'));
     }
 
@@ -47,8 +49,9 @@ class StepController extends Controller
             ->where('idCostumer', Auth::user()->idCostumer)
             ->get();
         if (count($row) == 1) {
-            return  $row[0];
+            return $row[0];
         }
+
         return response()->json(['message' => self::INVALID_DETAILS], 555);
     }
 
@@ -63,12 +66,13 @@ class StepController extends Controller
 
         $step = Step::findorFail($id);
         if ($step->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         $step->name = $request->input('name');
         $step->description = $request->input('description');
         $step->config = $request->input('config');
         $step->save();
+
         return $this->index($request, $idProject);
     }
 
@@ -100,7 +104,7 @@ class StepController extends Controller
 
         $step = Step::findorFail($id);
         if ($step->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         if ($step->delete()) {
             return $this->index($request, $idProject);

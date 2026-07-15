@@ -14,6 +14,7 @@ class VersionBrowserController extends Controller
         if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return VersionBrowser::where('idBrowser', '=', $idBrowser)->orderBy('version', 'asc')->get();
     }
 
@@ -31,6 +32,7 @@ class VersionBrowserController extends Controller
         $browserVersion->version = $request->input('version');
         $browserVersion->idBrowser = $request->input('idBrowser');
         $browserVersion->save();
+
         return $this->index($request, $request->input('idBrowser'));
     }
 
@@ -42,13 +44,14 @@ class VersionBrowserController extends Controller
             'id' => 'required',
         ]);
 
-        if (Auth::user()->role != 1){
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
         $browserVersion = VersionBrowser::findorFail($request->input('id'));
 
         $browserVersion->version = $request->input('version');
         $browserVersion->save();
+
         return $this->index($request, $request->input('idBrowser'));
     }
 }

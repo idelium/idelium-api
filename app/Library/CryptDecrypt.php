@@ -2,7 +2,6 @@
 
 namespace App\Library;
 
-
 class CryptDecrypt
 {
     /**
@@ -13,10 +12,11 @@ class CryptDecrypt
      */
     public function encrypt($stringToEncrypt)
     {
-       return openssl_encrypt($stringToEncrypt, "AES-128-ECB", env('IDELIUM_CRYPT_PASSWORD'));
+        return openssl_encrypt($stringToEncrypt, 'AES-128-ECB', env('IDELIUM_CRYPT_PASSWORD'));
     }
+
     public function decrypt($encryptedString)
     {
-        return openssl_decrypt($encryptedString, "AES-128-ECB", env('IDELIUM_CRYPT_PASSWORD'));
+        return openssl_decrypt($encryptedString, 'AES-128-ECB', env('IDELIUM_CRYPT_PASSWORD'));
     }
 }

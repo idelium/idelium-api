@@ -8,13 +8,13 @@ use Illuminate\Support\Facades\Auth;
 
 class ModelDeviceController extends Controller
 {
-
     public function index(Request $request, $idBrand)
     {
 
         if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return ModelDevice::where('idBrand', '=', $idBrand)->orderBy('model', 'asc')->get();
     }
 
@@ -25,14 +25,14 @@ class ModelDeviceController extends Controller
             'idBrand' => 'required',
         ]);
 
-        if (Auth::user()->role != 1)
-        {
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
         $modelDevice = new ModelDevice;
         $modelDevice->model = $request->input('model');
         $modelDevice->idBrand = $request->input('idBrand');
         $modelDevice->save();
+
         return $this->index($request, $request->input('idBrand'));
     }
 
@@ -44,13 +44,13 @@ class ModelDeviceController extends Controller
             'id' => 'required',
         ]);
 
-        if (Auth::user()->role != 1)
-        {
+        if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
         $os = ModelDevice::findorFail($request->input('id'));
         $os->model = $request->input('model');
         $os->save();
+
         return $this->index($request, $request->input('idBrand'));
     }
 }

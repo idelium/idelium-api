@@ -111,6 +111,7 @@ class SideBarController extends Controller
                 '
             );
         }
+
         return response()->json($sidebar);
     }
 }

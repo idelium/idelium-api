@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\TestCycle;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TestCycleController extends Controller
 {
@@ -33,6 +33,7 @@ class TestCycleController extends Controller
         $testcycle->idProject = $request->input('idProject');
         $testcycle->idCostumer = Auth::user()->idCostumer;
         $testcycle->save();
+
         return $this->index($request, $request->input('idProject'));
     }
 
@@ -49,10 +50,11 @@ class TestCycleController extends Controller
         ]);
         $testcycle = TestCycle::findorFail($id);
         if ($testcycle->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         $testcycle->config = $request->input('config');
         $testcycle->description = $request->input('description');
+
         return $this->index($request, $idProject);
     }
 }

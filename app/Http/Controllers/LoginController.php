@@ -1,19 +1,15 @@
 <?php
-   
-namespace App\Http\Controllers;
-   
-use Illuminate\Http\Request;
-use App\Http\Controllers\BaseController as BaseController;
-use App\Models\User;
-use Illuminate\Support\Facades\Auth;
-use App\Library\GoogleVerify;
-use Validator;
 
-use function PHPUnit\Framework\isEmpty;
+namespace App\Http\Controllers;
+
+use App\Library\GoogleVerify;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Validator;
 
 class LoginController extends BaseController
 {
-    
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -22,44 +18,43 @@ class LoginController extends BaseController
             'password' => 'required',
             'c_password' => 'required|same:password',
         ]);
-   
-        if ($validator->fails())
-        {
+
+        if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors());
         }
-   
+
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
-        $success['token'] =  $user->createToken('MyApp')->accessToken;
-        $success['name'] =  $user->name;
-   
+        $success['token'] = $user->createToken('MyApp')->accessToken;
+        $success['name'] = $user->name;
+
         return $this->sendResponse($success, 'User register successfully.');
     }
-    
+
     public function logout(Request $request)
     {
         Auth::user()->tokens()->delete();
         Auth::guard('web')->logout();
-        return $this->sendResponse('ok',200);
+
+        return $this->sendResponse('ok', 200);
     }
 
     public function login(Request $request)
     {
         $googleverify = new GoogleVerify;
-        if ( env('GOOGLE_KEY_SECRET') != null ) {
+        if (env('GOOGLE_KEY_SECRET') != null) {
             $jsonGoogle = $googleverify->check($request['token'], env('GOOGLE_KEY_SECRET'));
-            if (!$jsonGoogle->success)
-            {
+            if (! $jsonGoogle->success) {
                 return response()->json([
-                    'message' => 'Invalid gLogin details'
+                    'message' => 'Invalid gLogin details',
                 ], 401);
             }
         }
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        if (! Auth::attempt($request->only('email', 'password'))) {
             return response()->json([
-            'message' => 'Invalid login details'
-                    ], 401);
+                'message' => 'Invalid login details',
+            ], 401);
         }
         $user = User::where('email', $request['email'])->firstOrFail();
         $token = $user->createToken('idelium')->plainTextToken;
@@ -69,10 +64,11 @@ class LoginController extends BaseController
             'id' => $user->id,
         */
         Auth::login($user);
+
         return response()->json([
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'session' => 'tbd',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'session' => 'tbd',
         ]);
     }
 }

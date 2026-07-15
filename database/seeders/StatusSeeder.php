@@ -2,8 +2,9 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Status;
+use Faker\Factory;
+use Illuminate\Database\Seeder;
 
 class StatusSeeder extends Seeder
 {
@@ -16,7 +17,7 @@ class StatusSeeder extends Seeder
     {
         Status::truncate();
 
-        $faker = \Faker\Factory::create();
+        $faker = Factory::create();
 
         Status::create([
             'name' => 'suspended',
@@ -31,5 +32,5 @@ class StatusSeeder extends Seeder
             'name' => 'mantainence',
         ]);
     }
-        //
+    //
 }

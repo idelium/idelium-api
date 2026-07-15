@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\TestCycle;
-use App\Models\Test;
-use App\Models\Step;
-use App\Models\Plugin;
 use App\Models\Environment;
+use App\Models\Plugin;
+use App\Models\Step;
+use App\Models\Test;
+use App\Models\TestCycle;
 use Illuminate\Http\Request;
 
 class IdeliumClController extends Controller
 {
-    const INVALID_ID='Invalid id';
+    const INVALID_ID = 'Invalid id';
 
     public function getTestCycle(Request $request, $idTestCycle)
     {
@@ -19,11 +19,12 @@ class IdeliumClController extends Controller
         $query = TestCycle::where('id', $idTestCycle)
             ->where('idCostumer', $customer->id)
             ->get();
-        if (count($query)!=1) {
+        if (count($query) != 1) {
             return response()->json([
-                'message'=> self::INVALID_ID
+                'message' => self::INVALID_ID,
             ], 404);
         }
+
         return $query[0];
     }
 
@@ -33,11 +34,12 @@ class IdeliumClController extends Controller
         $query = Test::where('id', $idTest)
             ->where('idCostumer', $customer->id)
             ->get();
-        if (count($query) != 1 ) {
+        if (count($query) != 1) {
             return response()->json([
-                'message'=> self::INVALID_ID
+                'message' => self::INVALID_ID,
             ], 404);
         }
+
         return $query[0];
     }
 
@@ -47,18 +49,20 @@ class IdeliumClController extends Controller
         $query = Step::where('id', $idStep)
             ->where('idCostumer', $customer->id)
             ->get();
-        if (count($query) != 1 ) {
+        if (count($query) != 1) {
             return response()->json([
-                'message'=> self::INVALID_ID
+                'message' => self::INVALID_ID,
             ], 404);
- 
+
         }
+
         return $query[0];
     }
 
     public function getPlugins(Request $request, $idProject)
     {
         $customer = $this->ideliumCustomer($request);
+
         return Plugin::where('idProject', $idProject)
             ->where('idCostumer', $customer->id)
             ->get();
@@ -72,15 +76,17 @@ class IdeliumClController extends Controller
             ->get();
         if (count($query) == 0) {
             return response()->json([
-                'message'=> self::INVALID_ID
+                'message' => self::INVALID_ID,
             ], 404);
         }
+
         return $query[0];
     }
 
     public function getEnvironments(Request $request, $idProject)
     {
         $customer = $this->ideliumCustomer($request);
+
         return Environment::where('idProject', $idProject)
             ->where('idCostumer', $customer->id)
             ->get();
@@ -92,11 +98,12 @@ class IdeliumClController extends Controller
         $query = Environment::where('id', $idEnvironment)
             ->where('idCostumer', $customer->id)
             ->get();
-        if ( count($query) != 1 ) {
+        if (count($query) != 1) {
             return response()->json([
-                'message'=> self::INVALID_ID
+                'message' => self::INVALID_ID,
             ], 404);
         }
+
         return $query[0];
     }
 }

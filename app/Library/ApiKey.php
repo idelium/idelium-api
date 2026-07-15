@@ -2,7 +2,6 @@
 
 namespace App\Library;
 
-
 class ApiKey
 {
     /**
@@ -14,7 +13,7 @@ class ApiKey
     public function generateApiSignature()
     {
         $signature = bin2hex(random_bytes(64));
+
         return base64_encode($signature);
     }
-
 }

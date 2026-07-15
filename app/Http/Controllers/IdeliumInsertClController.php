@@ -28,16 +28,17 @@ class IdeliumInsertClController extends Controller
             return response()->json(['message' => self::INVALID_DETAILS], 404);
         }
 
-        date_default_timezone_set("Europe/Rome");
-        $now = new \DateTime();
+        date_default_timezone_set('Europe/Rome');
+        $now = new \DateTime;
         $testCycle = new PerformedTestCycle;
         $testCycle->testCycleId = $request->input('testCycleId');
         $testCycle->date = $now;
         $testCycle->status = 0;
         $testCycle->idCostumer = $customer->id;
         $testCycle->save();
+
         return response()->json([
-            'idCycle' => $testCycle->id
+            'idCycle' => $testCycle->id,
         ], 200);
     }
 
@@ -69,8 +70,9 @@ class IdeliumInsertClController extends Controller
         $test->idCostumer = $customer->id;
         $test->status = 0;
         $test->save();
+
         return response()->json([
-            'idTest' => $test->id
+            'idTest' => $test->id,
         ], 200);
     }
 
@@ -90,8 +92,9 @@ class IdeliumInsertClController extends Controller
         }
         $test->status = $request->input('status');
         $test->save();
+
         return response()->json([
-            'idTest' => $test->id
+            'idTest' => $test->id,
         ], 200);
     }
 
@@ -136,8 +139,9 @@ class IdeliumInsertClController extends Controller
         $step->type = $request->input('type');
         $step->idCostumer = $customer->id;
         $step->save();
+
         return response()->json([
-            'idStep' => $step->id
+            'idStep' => $step->id,
         ], 200);
     }
 
@@ -157,8 +161,9 @@ class IdeliumInsertClController extends Controller
         }
         $step->screenshots = $request->input('screenshots');
         $step->save();
+
         return response()->json([
-            'idStep' => $step->id
+            'idStep' => $step->id,
         ], 200);
     }
 }

@@ -1,45 +1,44 @@
 <?php
 
-use App\Http\Controllers\SideBarController;
-use App\Http\Controllers\HeaderController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\RoleController;
+use App\Http\Controllers\BrandDeviceController;
+use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\CostumerController;
-use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\EnvironmentController;
-use App\Http\Controllers\PluginController;
-use App\Http\Controllers\StepController;
-use App\Http\Controllers\ImportSeleniumController;
-use App\Http\Controllers\TestController;
-use App\Http\Controllers\TestCycleController;
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\PerformedTestCycleController;
-use App\Http\Controllers\PerformedTestController;
-use App\Http\Controllers\PerformedStepController;
+use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
-use App\Http\Controllers\TestLauncherController;
-use App\Http\Controllers\PlatformController;
-use App\Http\Controllers\StatusController;
-use App\Http\Controllers\TypeController;
-use App\Http\Controllers\OsController;
-use App\Http\Controllers\VersionOsController;
-use App\Http\Controllers\BrowserController;
-use App\Http\Controllers\VersionBrowserController;
-use App\Http\Controllers\BrandDeviceController;
-use App\Http\Controllers\ModelDeviceController;
+use App\Http\Controllers\ImportSeleniumController;
 use App\Http\Controllers\LocationController;
-use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
-
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\ModelDeviceController;
+use App\Http\Controllers\OsController;
+use App\Http\Controllers\PerformedStepController;
+use App\Http\Controllers\PerformedTestController;
+use App\Http\Controllers\PerformedTestCycleController;
+use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\PluginController;
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SideBarController;
+use App\Http\Controllers\StatusController;
+use App\Http\Controllers\StepController;
+use App\Http\Controllers\TestController;
+use App\Http\Controllers\TestCycleController;
+use App\Http\Controllers\TestLauncherController;
+use App\Http\Controllers\TypeController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\VersionBrowserController;
+use App\Http\Controllers\VersionOsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Laravel\Sanctum\Http\Controllers\CsrfCookieController;
 
 Route::get('sanctum/csrf-cookie', [CsrfCookieController::class, 'show'])
     ->name('csrf.show');
 Route::post('login', [LoginController::class, 'login'])
-    ->name('login');;
+    ->name('login');
 Route::get('logout', [LoginController::class, 'logout'])
-    ->name('logout');;
+    ->name('logout');
 
 Route::middleware('auth:sanctum')->group(function () {
     /* menu */
@@ -141,16 +140,16 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('environments.update');
     Route::post('admin/environments', [EnvironmentController::class, 'store'])
         ->name('environments.store');
-        /* performed testcycles */;
+    /* performed testcycles */
     Route::get('admin/testcyclesperfomed/{idTestCyclePerformed}', [PerformedTestCycleController::class, 'index'])
         ->name('testcyclesperfomed.index');
-        /* performed test */;
+    /* performed test */
     Route::get('admin/testsperfomed/{idTestPerformed}', [PerformedTestController::class, 'index'])
         ->name('testsperfomed.index');
-        /* performed step */;
+    /* performed step */
     Route::get('admin/stepsperfomed/{idTestPerformed}', [PerformedStepController::class, 'index'])
         ->name('testsperfomed.index');
-        /* platforms */;
+    /* platforms */
     Route::get('admin/platforms/manageplatforms/{type}', [PlatformController::class, 'index'])
         ->name('platform.index');
     Route::post('admin/platforms/manageplatforms', [PlatformController::class, 'store'])

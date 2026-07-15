@@ -16,8 +16,8 @@ class AuthServiceProvider extends ServiceProvider
      * @var array
      */
     protected $policies = [
-       'App\Models\Model' => 'App\Policies\ModelPolicy',
-       User::class => UserPolicy::class,
+        'App\Models\Model' => 'App\Policies\ModelPolicy',
+        User::class => UserPolicy::class,
     ];
 
     /**
@@ -29,11 +29,11 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
         Gate::define('createAccount', [UserPolicy::class, 'create']);
-       /* Passport::routes();
-        Passport::hashClientSecrets();
-        Passport::tokensExpireIn(now()->addDays(15));
-        Passport::refreshTokensExpireIn(now()->addDays(30));
-        Passport::personalAccessTokensExpireIn(now()->addMonths(6)); */
+        /* Passport::routes();
+         Passport::hashClientSecrets();
+         Passport::tokensExpireIn(now()->addDays(15));
+         Passport::refreshTokensExpireIn(now()->addDays(30));
+         Passport::personalAccessTokensExpireIn(now()->addMonths(6)); */
         //
     }
 }

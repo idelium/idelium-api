@@ -21,8 +21,11 @@ class IdeliumCliTenantIsolationTest extends TestCase
     use RefreshDatabase;
 
     private Costumer $firstCostumer;
+
     private Costumer $secondCostumer;
+
     private Project $firstProject;
+
     private Project $secondProject;
 
     protected function setUp(): void

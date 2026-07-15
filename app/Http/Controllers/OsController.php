@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 
 class OsController extends Controller
 {
-
     public function index(Request $request, $idType)
     {
         return Os::where('type', '=', $idType)->get();
@@ -28,6 +27,7 @@ class OsController extends Controller
         $os->name = $request->input('name');
         $os->type = $request->input('type');
         $os->save();
+
         return $this->index($request, $request->input('type'));
     }
 
@@ -44,6 +44,7 @@ class OsController extends Controller
         $os = Os::findorFail($request->input('id'));
         $os->name = $request->input('name');
         $os->save();
+
         return $this->index($request, $request->input('type'));
     }
 }

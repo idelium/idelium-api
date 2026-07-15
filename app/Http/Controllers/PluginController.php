@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Plugin;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PluginController extends Controller
 {
-    const INVALID_DETAILS='Invalid details';
+    const INVALID_DETAILS = 'Invalid details';
 
     public function index(Request $request, $idProject)
     {
@@ -31,15 +31,15 @@ class PluginController extends Controller
             'idProject' => 'required',
         ]);
 
-
         $plugin = new Plugin;
         $plugin->name = $request->input('name');
-        $plugin->code =  json_encode($request->input('code'));
+        $plugin->code = json_encode($request->input('code'));
         $plugin->description = $request->input('description');
         $plugin->idProject = $request->input('idProject');
         $plugin->idCostumer = Auth::user()->idCostumer;
 
         $plugin->save();
+
         return $this->index($request, $request->input('idProject'));
     }
 
@@ -51,8 +51,9 @@ class PluginController extends Controller
             ->where('idCostumer', Auth::user()->idCostumer)
             ->get();
         if (count($row) == 1) {
-            return  $row[0];
+            return $row[0];
         }
+
         return response()->json(['message' => self::INVALID_DETAILS], 555);
     }
 
@@ -62,13 +63,13 @@ class PluginController extends Controller
             'code' => 'required',
         ]);
 
-
         $plugin = Plugin::findorFail($id);
         if ($plugin->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         $plugin->code = $request->input('code');
         $plugin->save();
+
         return $this->index($request, $idProject);
     }
 
@@ -77,7 +78,7 @@ class PluginController extends Controller
 
         $plugin = Plugin::findorFail($id);
         if ($plugin->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
+            return response()->json(['message' => self::INVALID_DETAILS], 555);
         }
         if ($plugin->delete()) {
             return $this->index($request, $idProject);

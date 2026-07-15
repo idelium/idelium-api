@@ -16,7 +16,7 @@ class CreateVersionOsTable extends Migration
         Schema::create('version_os', function (Blueprint $table) {
             $table->id();
             $table->string('version');
-            $table->integer('idOs');        
+            $table->integer('idOs');
             $table->timestamps();
         });
     }

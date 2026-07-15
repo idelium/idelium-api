@@ -1,7 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Route;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -23,5 +24,5 @@ Route::get('/api/clear', function () {
     Artisan::call('config:cache');
     Artisan::call('view:clear');
 
-    return "Cleared!";
+    return 'Cleared!';
 });

@@ -16,6 +16,7 @@ class UserResponseSecurityTest extends TestCase
     use RefreshDatabase;
 
     private Costumer $firstCustomer;
+
     private Costumer $secondCustomer;
 
     protected function setUp(): void

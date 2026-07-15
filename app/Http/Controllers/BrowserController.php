@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Auth;
 
 class BrowserController extends Controller
 {
-
     public function index(Request $request, $idOs)
     {
         return Browser::where('idOs', '=', $idOs)->orderBy('name', 'asc')->get();
@@ -27,6 +26,7 @@ class BrowserController extends Controller
         $osVersion->name = $request->input('name');
         $osVersion->idOs = $request->input('idOs');
         $osVersion->save();
+
         return $this->index($request, $request->input('idOs'));
     }
 
@@ -45,6 +45,7 @@ class BrowserController extends Controller
 
         $os->name = $request->input('name');
         $os->save();
+
         return $this->index($request, $request->input('idOs'));
     }
 }

@@ -79,6 +79,7 @@ class UserController extends Controller
             ->where('users.id', Auth::user()->id)
             ->first();
     }
+
     public function updatePasswordUser(Request $request)
     {
         $this->validate($request, [
@@ -88,6 +89,7 @@ class UserController extends Controller
         $user = User::findorFail(Auth::user()->id);
         $user->password = bcrypt($request->input('password'));
         $user->save();
+
         return $this->getuser($request);
     }
 
@@ -99,8 +101,8 @@ class UserController extends Controller
         }
 
         $validated = $this->validate($request, [
-          'name' => 'required',
-          'password' => 'required|string|min:8',
+            'name' => 'required',
+            'password' => 'required|string|min:8',
         ]);
 
         $user = $this->accountForMutation($authenticatedUser, $id);

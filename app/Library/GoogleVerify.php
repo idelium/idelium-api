@@ -2,7 +2,6 @@
 
 namespace App\Library;
 
-
 class GoogleVerify
 {
     public function check($token, $secret)
@@ -11,7 +10,7 @@ class GoogleVerify
         $postData['secret'] = $secret;
         $postData['response'] = $token;
         foreach ($postData as $key => $value) {
-            $postItems[] = $key . '=' . $value;
+            $postItems[] = $key.'='.$value;
         }
         $postString = implode('&', $postItems);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
@@ -19,6 +18,7 @@ class GoogleVerify
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $postString);
         $content = curl_exec($ch);
+
         return json_decode($content);
     }
 }

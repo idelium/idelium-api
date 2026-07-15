@@ -2,45 +2,49 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Costumer;
 use App\Library\ApiKey;
+use App\Models\Costumer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
-
 class CostumerController extends Controller
 {
-
     public function index(Request $request)
     {
         if (Auth::user()->role != 1) {
             return response()->json('ok');
         }
+
         return Costumer::orderBy('created_at', 'asc')->get();
     }
+
     public function store(Request $request)
     {
         if (Auth::user()->role != 1) {
-            return response()->json('ok');}
+            return response()->json('ok');
+        }
         $this->validate($request, [
             'costumer' => 'required',
         ]);
         $startDate = time();
-        $apiKey= new ApiKey;
+        $apiKey = new ApiKey;
         $costumer = new Costumer;
         $costumer->costumer = strtoupper($request->input('costumer'));
         $costumer->description = strtoupper($request->input('description'));
         $costumer->licenseExpiration = date('Y-m-d H:i:s', strtotime('+365 day', $startDate));
         $costumer->apiKey = $apiKey->generateApiSignature();
-        $costumer->logo = "[]";
+        $costumer->logo = '[]';
         $costumer->save();
+
         return $this->index($request);
     }
 
     public function show(Request $request, $id)
     {
         if (Auth::user()->role != 1) {
-            return response()->json('ok');}
+            return response()->json('ok');
+        }
+
         return Costumer::findorFail($id);
     }
 
@@ -55,6 +59,7 @@ class CostumerController extends Controller
         if (count($costumers) == 1) {
             return $costumers[0];
         }
+
         return Auth::user()->idCostumer;
     }
 
@@ -63,11 +68,12 @@ class CostumerController extends Controller
         if (Auth::user()->role > 2) {
             return response()->json('ok');
         }
-        $apiKey=new apiKey;
+        $apiKey = new ApiKey;
         $costumer = Costumer::findorFail(Auth::user()->idCostumer);
         $costumer->apiKey = $apiKey->generateApiSignature();
         $costumer->save();
-        return array('apiKey' => $costumer->apiKey);
+
+        return ['apiKey' => $costumer->apiKey];
     }
 
     public function update(Request $request, $id)
@@ -77,13 +83,14 @@ class CostumerController extends Controller
         }
         $this->validate($request, [
             'costumer' => 'required',
-            'description' => 'required'
+            'description' => 'required',
         ]);
 
         $costumer = Costumer::findorFail($id);
         $costumer->costumer = strtoupper($request->input('costumer'));
         $costumer->description = strtoupper($request->input('description'));
         $costumer->save();
+
         return $this->index($request);
     }
 
