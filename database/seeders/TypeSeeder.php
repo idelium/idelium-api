@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\Type;
-use Faker\Factory;
 use Illuminate\Database\Seeder;
 
 class TypeSeeder extends Seeder
@@ -15,16 +14,8 @@ class TypeSeeder extends Seeder
      */
     public function run()
     {
-        //
-        Type::truncate();
-
-        $faker = Factory::create();
-
-        Type::create([
-            'name' => 'desktop',
-        ]);
-        Type::create([
-            'name' => 'mobile devices',
-        ]);
+        foreach (['desktop', 'mobile devices'] as $name) {
+            Type::firstOrCreate(['name' => $name]);
+        }
     }
 }
