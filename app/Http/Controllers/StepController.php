@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Step;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 
 class StepController extends Controller
@@ -75,19 +76,22 @@ class StepController extends Controller
     {
 
         $this->validate($request, [
-            'order' => 'required',
+            'order' => 'required|array',
+            'order.*.id' => 'required|integer',
         ]);
-        $count = 0;
 
-        foreach ($request->input('order') as $stepObject) {
-            $step = Step::findorFail($stepObject['id']);
-            if ($step->idCostumer != Auth::user()->idCostumer) {
-                return  response()->json(['message' => self::INVALID_DETAILS], 555);
+        DB::transaction(function () use ($request, $idProject) {
+            foreach ($request->input('order') as $position => $stepObject) {
+                $step = Step::whereKey($stepObject['id'])
+                    ->where('idProject', $idProject)
+                    ->where('idCostumer', Auth::user()->idCostumer)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+                $step->order = $position;
+                $step->save();
             }
-            $step->order = $count;
-            $step->save();
-            $count = $count + 1;
-        }
+        });
+
         return $this->index($request, $idProject);
     }
 

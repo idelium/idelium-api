@@ -12,6 +12,7 @@ use App\Models\PerformedStep;
 use App\Models\PerformedTest;
 use App\Models\PerformedTestCycle;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 use Illuminate\Http\Request;
 
@@ -71,26 +72,30 @@ class ProjectController extends Controller
 
     public function destroy(Request $request, $id)
     {
+        DB::transaction(function () use ($id) {
+            $project = Project::whereKey($id)
+                ->where('idCostumer', Auth::user()->idCostumer)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $project = Project::findorFail($id);
-        if ($project->idCostumer != Auth::user()->idCostumer) {
-            return  response()->json(['message' => self::INVALID_DETAILS], 555);
-        }
-        if ($project->delete()) {
+            $testCycleIds = TestCycle::where('idCostumer', Auth::user()->idCostumer)
+                ->where('idProject', $id)
+                ->pluck('id');
+            $performedCycleIds = PerformedTestCycle::whereIn('testCycleId', $testCycleIds)
+                ->where('idCostumer', Auth::user()->idCostumer)
+                ->pluck('id');
+
+            PerformedStep::whereIn('testCycleDoneId', $performedCycleIds)->delete();
+            PerformedTest::whereIn('testCycleDoneId', $performedCycleIds)->delete();
+            PerformedTestCycle::whereIn('id', $performedCycleIds)->delete();
+            TestCycle::whereIn('id', $testCycleIds)->delete();
             Environment::where('idProject', $id)->delete();
             Plugin::where('idProject', $id)->delete();
             Step::where('idProject', $id)->delete();
             Test::where('idProject', $id)->delete();
-            $testcycles = TestCycle::select('id')
-                ->where('idCostumer', Auth::user()->idCostumer)
-                ->where('idProject', $id)->get();
-            foreach ($testcycles as $tc) {
-                PerformedStep::where('testCycleDoneId', $tc->id)->delete();
-                PerformedTest::where('testCycleDoneId', $tc->id)->delete();
-                PerformedTestCycle::where('testCycleId', $tc->id)->delete();
-            }
-            TestCycle::where('idProject', $id)->delete();
-            return $this->index($request);
-        }
+            $project->delete();
+        });
+
+        return $this->index($request);
     }
 }

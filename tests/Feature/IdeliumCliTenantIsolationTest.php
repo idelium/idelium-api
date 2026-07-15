@@ -8,6 +8,7 @@ use App\Models\PerformedStep;
 use App\Models\PerformedTest;
 use App\Models\PerformedTestCycle;
 use App\Models\Plugin;
+use App\Models\Project;
 use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
@@ -21,6 +22,8 @@ class IdeliumCliTenantIsolationTest extends TestCase
 
     private Costumer $firstCostumer;
     private Costumer $secondCostumer;
+    private Project $firstProject;
+    private Project $secondProject;
 
     protected function setUp(): void
     {
@@ -28,6 +31,8 @@ class IdeliumCliTenantIsolationTest extends TestCase
 
         $this->firstCostumer = $this->createCostumer('first-api-key', 'First customer');
         $this->secondCostumer = $this->createCostumer('second-api-key', 'Second customer');
+        $this->firstProject = $this->createProject($this->firstCostumer, 'FIRST');
+        $this->secondProject = $this->createProject($this->secondCostumer, 'SECOND');
     }
 
     public function test_cli_routes_reject_a_missing_or_invalid_api_key(): void
@@ -48,7 +53,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => 'Second customer cycle',
             'description' => 'A protected test cycle',
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->secondProject->id,
             'idCostumer' => $this->secondCostumer->id,
         ]);
 
@@ -66,7 +71,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => 'First customer cycle',
             'description' => 'An authorized test cycle',
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->firstProject->id,
             'idCostumer' => $this->firstCostumer->id,
         ]);
 
@@ -85,7 +90,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => 'Second customer plugin',
             'code' => json_encode([]),
             'description' => 'A protected plugin',
-            'idProject' => 1,
+            'idProject' => $this->secondProject->id,
             'idCostumer' => $this->secondCostumer->id,
         ]);
 
@@ -132,13 +137,11 @@ class IdeliumCliTenantIsolationTest extends TestCase
 
     public function test_customer_cannot_update_another_customer_performed_test(): void
     {
-        $performedTest = PerformedTest::forceCreate([
-            'testCycleDoneId' => 1,
-            'testId' => 1,
-            'status' => 0,
-            'name' => 'Second customer test',
-            'idCostumer' => $this->secondCostumer->id,
-        ]);
+        $performedCycle = $this->createPerformedTestCycle($this->secondCostumer);
+        $performedTest = $this->createPerformedTest(
+            $this->secondCostumer,
+            $performedCycle->id
+        );
 
         $response = $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
             ->putJson('/api/ideliumcl/test', [
@@ -158,13 +161,11 @@ class IdeliumCliTenantIsolationTest extends TestCase
 
     public function test_customer_can_update_own_performed_test(): void
     {
-        $performedTest = PerformedTest::forceCreate([
-            'testCycleDoneId' => 1,
-            'testId' => 1,
-            'status' => 0,
-            'name' => 'First customer test',
-            'idCostumer' => $this->firstCostumer->id,
-        ]);
+        $performedCycle = $this->createPerformedTestCycle($this->firstCostumer);
+        $performedTest = $this->createPerformedTest(
+            $this->firstCostumer,
+            $performedCycle->id
+        );
 
         $response = $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
             ->putJson('/api/ideliumcl/test', [
@@ -184,10 +185,16 @@ class IdeliumCliTenantIsolationTest extends TestCase
 
     public function test_customer_cannot_update_another_customer_performed_step(): void
     {
+        $performedCycle = $this->createPerformedTestCycle($this->secondCostumer);
+        $performedTest = $this->createPerformedTest(
+            $this->secondCostumer,
+            $performedCycle->id
+        );
+        $step = $this->createStep($this->secondCostumer, 'Second customer step');
         $performedStep = PerformedStep::forceCreate([
-            'testCycleDoneId' => 1,
-            'testDoneId' => 1,
-            'stepId' => 1,
+            'testCycleDoneId' => $performedCycle->id,
+            'testDoneId' => $performedTest->id,
+            'stepId' => $step->id,
             'status' => 0,
             'name' => 'Second customer step',
             'screenshots' => json_encode([]),
@@ -417,7 +424,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => $name,
             'description' => $name,
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->projectFor($customer)->id,
             'idCostumer' => $customer->id,
         ]);
     }
@@ -428,7 +435,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => $name,
             'description' => $name,
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->projectFor($customer)->id,
             'idCostumer' => $customer->id,
         ]);
     }
@@ -439,7 +446,7 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'name' => $name,
             'description' => $name,
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->projectFor($customer)->id,
             'order' => 1,
             'idCostumer' => $customer->id,
         ]);
@@ -453,15 +460,17 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'code' => $code,
             'description' => $code,
             'config' => json_encode([]),
-            'idProject' => 1,
+            'idProject' => $this->projectFor($customer)->id,
             'idCostumer' => $customer->id,
         ]);
     }
 
     private function createPerformedTestCycle(Costumer $customer): PerformedTestCycle
     {
+        $testCycle = $this->createTestCycle($customer, 'Performed cycle source');
+
         return PerformedTestCycle::forceCreate([
-            'testCycleId' => 1,
+            'testCycleId' => $testCycle->id,
             'date' => now(),
             'status' => 0,
             'idCostumer' => $customer->id,
@@ -472,13 +481,31 @@ class IdeliumCliTenantIsolationTest extends TestCase
         Costumer $customer,
         int $performedTestCycleId
     ): PerformedTest {
+        $test = $this->createTest($customer, 'Performed test source');
+
         return PerformedTest::forceCreate([
             'testCycleDoneId' => $performedTestCycleId,
-            'testId' => 1,
+            'testId' => $test->id,
             'status' => 0,
             'name' => 'Performed test',
             'idCostumer' => $customer->id,
         ]);
+    }
+
+    private function createProject(Costumer $customer, string $name): Project
+    {
+        return Project::forceCreate([
+            'name' => $name,
+            'description' => $name,
+            'idCostumer' => $customer->id,
+        ]);
+    }
+
+    private function projectFor(Costumer $customer): Project
+    {
+        return $customer->is($this->firstCostumer)
+            ? $this->firstProject
+            : $this->secondProject;
     }
 
     private function createPerformedStepRequest(
