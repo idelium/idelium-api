@@ -221,28 +221,30 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 /* command line api */
-Route::get('ideliumcl/testcycle/{idTestCycle}', [IdeliumClController::class, 'getTestCycle'])
-    ->name('cl.getTestCycle');
-Route::get('ideliumcl/test/{idTest}', [IdeliumClController::class, 'getTest'])
-    ->name('cl.getTest');
-Route::get('ideliumcl/step/{idStep}', [IdeliumClController::class, 'getStep'])
-    ->name('cl.getStep');
-Route::get('ideliumcl/plugins/{idProject}', [IdeliumClController::class, 'getPlugins'])
-    ->name('cl.getPlugins');
-Route::get('ideliumcl/plugin/{idPlugin}', [IdeliumClController::class, 'getPlugin'])
-    ->name('cl.getPlugin');
-Route::get('ideliumcl/environments/{idProject}', [IdeliumClController::class, 'getEnvironments'])
-    ->name('cl.getEnvironments');
-Route::get('ideliumcl/environment/{idEnvironment}', [IdeliumClController::class, 'getEnvironment'])
-    ->name('cl.getEnvironment');
+Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
+    Route::get('testcycle/{idTestCycle}', [IdeliumClController::class, 'getTestCycle'])
+        ->name('cl.getTestCycle');
+    Route::get('test/{idTest}', [IdeliumClController::class, 'getTest'])
+        ->name('cl.getTest');
+    Route::get('step/{idStep}', [IdeliumClController::class, 'getStep'])
+        ->name('cl.getStep');
+    Route::get('plugins/{idProject}', [IdeliumClController::class, 'getPlugins'])
+        ->name('cl.getPlugins');
+    Route::get('plugin/{idPlugin}', [IdeliumClController::class, 'getPlugin'])
+        ->name('cl.getPlugin');
+    Route::get('environments/{idProject}', [IdeliumClController::class, 'getEnvironments'])
+        ->name('cl.getEnvironments');
+    Route::get('environment/{idEnvironment}', [IdeliumClController::class, 'getEnvironment'])
+        ->name('cl.getEnvironment');
 
-Route::post('ideliumcl/testcycle', [IdeliumInsertClController::class, 'createFolder'])
-    ->name('cl.createFolder');
-Route::post('ideliumcl/test', [IdeliumInsertClController::class, 'createTest'])
-    ->name('cl.createTest');
-Route::put('ideliumcl/test', [IdeliumInsertClController::class, 'updateTest'])
-    ->name('cl.updateTest');
-Route::post('ideliumcl/step', [IdeliumInsertClController::class, 'createStep'])
-    ->name('cl.createStep');
-Route::put('ideliumcl/step', [IdeliumInsertClController::class, 'updateStep'])
-    ->name('cl.updateStep');
+    Route::post('testcycle', [IdeliumInsertClController::class, 'createFolder'])
+        ->name('cl.createFolder');
+    Route::post('test', [IdeliumInsertClController::class, 'createTest'])
+        ->name('cl.createTest');
+    Route::put('test', [IdeliumInsertClController::class, 'updateTest'])
+        ->name('cl.updateTest');
+    Route::post('step', [IdeliumInsertClController::class, 'createStep'])
+        ->name('cl.createStep');
+    Route::put('step', [IdeliumInsertClController::class, 'updateStep'])
+        ->name('cl.updateStep');
+});

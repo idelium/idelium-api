@@ -7,28 +7,17 @@ use App\Models\Test;
 use App\Models\Step;
 use App\Models\Plugin;
 use App\Models\Environment;
-use App\Models\Costumer;
 use Illuminate\Http\Request;
 
 class IdeliumClController extends Controller
 {
-    const INVALID_KEY='Invalid key';
     const INVALID_ID='Invalid id';
-
-    private function checkApiKey($key)
-    {
-        return  Costumer::where('apiKey', $key)->get();
-    }
 
     public function getTestCycle(Request $request, $idTestCycle)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer) !=1 ) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         $query = TestCycle::where('id', $idTestCycle)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
         if (count($query)!=1) {
             return response()->json([
@@ -40,36 +29,28 @@ class IdeliumClController extends Controller
 
     public function getTest(Request $request, $idTest)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer)  !=  1) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         $query = Test::where('id', $idTest)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
         if (count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
-            ], 502);
+            ], 404);
         }
         return $query[0];
     }
 
     public function getStep(Request $request, $idStep)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer)  !=  1) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         $query = Step::where('id', $idStep)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
         if (count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
-            ], 502);
+            ], 404);
  
         }
         return $query[0];
@@ -77,26 +58,17 @@ class IdeliumClController extends Controller
 
     public function getPlugins(Request $request, $idProject)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer)  !=  1)
-        {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         return Plugin::where('idProject', $idProject)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
     }
 
     public function getPlugin(Request $request, $idPlugin)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer) != 1) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         $query = Plugin::where('id', $idPlugin)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
         if (count($query) == 0) {
             return response()->json([
@@ -108,30 +80,22 @@ class IdeliumClController extends Controller
 
     public function getEnvironments(Request $request, $idProject)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer)  !=  1) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         return Environment::where('idProject', $idProject)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
     }
 
     public function getEnvironment(Request $request, $idEnvironment)
     {
-        $key =  $request->header('Idelium-Key');
-        $costumer = $this->checkApiKey($key);
-        if (count($costumer)  !=  1) {
-            return response()->json(['message' => self::INVALID_KEY], 401);
-        }
+        $customer = $this->ideliumCustomer($request);
         $query = Environment::where('id', $idEnvironment)
-            ->where('idCostumer', $costumer[0]->id)
+            ->where('idCostumer', $customer->id)
             ->get();
         if ( count($query) != 1 ) {
             return response()->json([
                 'message'=> self::INVALID_ID
-            ], 502);
+            ], 404);
         }
         return $query[0];
     }
