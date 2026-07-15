@@ -7,6 +7,30 @@ Idelium AS is the tool that allows you to configure your tests. You can define y
 Once you have configured what you want to test, you are ready to run your test using [idelium-cli](https://github.com/idelium/idelium-cli).
 
 For more info: https://idelium.io
+
+## Development and verification
+
+The supported runtime range is PHP 8.2 through PHP 8.4. Dependency resolution
+uses Composer 2.10.2 with a PHP 8.2 platform, and `composer.lock` is committed so
+local and CI installations use the same package versions.
+
+Run the same quality gates as CI from the repository root:
+
+```bash
+composer install --no-interaction --prefer-dist
+composer validate --strict --no-check-publish
+find app bootstrap config database routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
+composer format:check
+touch database/ci.sqlite
+APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate:fresh --force
+APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate:rollback --step=1 --force
+APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate --force
+APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=:memory: composer test
+```
+
+CI runs these commands on PHP 8.2, 8.3, and 8.4. Update dependencies with the
+same Composer version, review the resulting lockfile diff, and rerun all gates.
+
 ## idelium-docker
 
 idelium-docker is a docker project to start Idelium AS locally, as a pre-requisite you must have docker on your machine (https://www.docker.com/)
