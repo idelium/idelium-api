@@ -2,32 +2,32 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
 use App\Models\User;
-use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $authenticatedUser = Auth::user();
+        if ($authenticatedUser->role > 2) {
+            return response()->json('ok');
+        }
 
-        if (Auth::user()->role > 2) return response()->json('ok');
-        if (Auth::user()->role==1) {
-            return DB::table('users')
-                ->join('costumers', 'users.idCostumer', '=', 'costumers.id')
-                ->join('roles', 'users.role', '=', 'roles.id')
-                ->select('users.*', 'costumers.costumer', 'roles.name as roleName')
+        if ($authenticatedUser->role == 1) {
+            return $this->accountQuery()
+                ->orderBy('users.email', 'asc')
                 ->get();
         }
-        return DB::table('users')
-                ->join('costumers', 'users.idCostumer', '=', 'costumers.id')
-                ->join('roles', 'users.role', '=', 'roles.id')
-                ->select('users.*', 'costumers.costumer', 'roles.name as roleName')
-                ->where('role', '>', 1)
-                ->where('idCostumer', Auth::user()->idCostumer)
-                ->orderBy('email', 'asc')->get();
+
+        return $this->accountQuery()
+            ->where('users.role', '>', 1)
+            ->where('users.idCostumer', $authenticatedUser->idCostumer)
+            ->orderBy('users.email', 'asc')
+            ->get();
     }
 
     public function store(Request $request)
@@ -55,19 +55,22 @@ class UserController extends Controller
             $user->idCostumer = $request->input('idCostumer');
         }
         $user->save();
-      return $this->index($request);
+        return $this->index($request);
     }
 
     public function getuser(Request $request)
     {
-
-        $users=DB::table('users')
+        return DB::table('users')
             ->join('costumers', 'users.idCostumer', '=', 'costumers.id')
             ->join('roles', 'users.role', '=', 'roles.id')
-            ->select('users.email', 'users.name', 'costumers.costumer as companyName', 'roles.name as roleName')
+            ->select([
+                'users.email',
+                'users.name',
+                'costumers.costumer as companyName',
+                'roles.name as roleName',
+            ])
             ->where('users.id', Auth::user()->id)
-            ->orderBy('email', 'asc')->get();
-        return $users[0];
+            ->first();
     }
     public function updatePasswordUser(Request $request)
     {
@@ -78,7 +81,7 @@ class UserController extends Controller
         $user = User::findorFail(Auth::user()->id);
         $user->password = bcrypt($request->input('password'));
         $user->save();
-        return $this->index($request);
+        return $this->getuser($request);
     }
 
     public function update(Request $request, $id)
@@ -100,7 +103,7 @@ class UserController extends Controller
         $user->save();
         return $this->index($request);
     }
-    public function destroy(Request $request,$id)
+    public function destroy(Request $request, $id)
     {
         if (Auth::user()->role > 2) {
             return response()->json('ok');
@@ -113,5 +116,21 @@ class UserController extends Controller
         if ($user->delete()) {
             return $this->index($request);
         }
+    }
+
+    private function accountQuery(): Builder
+    {
+        return DB::table('users')
+            ->join('costumers', 'users.idCostumer', '=', 'costumers.id')
+            ->join('roles', 'users.role', '=', 'roles.id')
+            ->select([
+                'users.id',
+                'users.email',
+                'users.name',
+                'users.role',
+                'users.idCostumer',
+                'costumers.costumer',
+                'roles.name as roleName',
+            ]);
     }
 }
