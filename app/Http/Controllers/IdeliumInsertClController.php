@@ -108,9 +108,9 @@ class IdeliumInsertClController extends Controller
             'stepId' => 'required|integer',
             'name' => 'required|string',
             'status' => 'required|integer',
-            'screenshots' => 'required',
-            'data' => 'required',
-            'type' => 'required',
+            'screenshots' => 'required|json',
+            'data' => 'required|json|max:1048576',
+            'type' => 'required|string|in:selenium,seleniumOrAppium,postman',
         ]);
 
         $performedTestCycleExists = PerformedTestCycle::where(
