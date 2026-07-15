@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+!.env.example
+bootstrap/cache/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+storage/logs/*
+vendor
