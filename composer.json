@@ -8,7 +8,7 @@
         "php": ">=8.2 <8.5",
         "guzzlehttp/guzzle": "^7.5",
         "laravel/framework": "^12.13",
-        "laravel/passport": "^12.2",
+        "laravel/passport": "^13.7",
         "laravel/sanctum": "^4.1",
         "laravel/tinker": "^3.0",
         "spatie/laravel-ignition": "^2.1"
