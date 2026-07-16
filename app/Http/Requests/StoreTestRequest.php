@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\ValidatesOwnedProject;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTestCycleRequest extends FormRequest
+class StoreTestRequest extends FormRequest
 {
     use ValidatesOwnedProject;
 

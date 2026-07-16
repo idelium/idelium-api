@@ -2,71 +2,62 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StorePluginRequest;
+use App\Http\Requests\UpdatePluginRequest;
 use App\Models\Plugin;
+use App\Services\TenantResourceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class PluginController extends Controller
 {
-    const INVALID_DETAILS = 'Invalid details';
+    public function __construct(private TenantResourceService $tenantResources) {}
 
     public function index(Request $request, $idProject)
     {
+        $this->tenantResources->project($request->user(), $idProject);
 
         return Plugin::select('id', 'name', 'description')->where(
             'idProject',
             $idProject
         )->where(
             'idCostumer',
-            Auth::user()->idCostumer
+            $request->user()->idCostumer
         )->get();
     }
 
-    public function store(Request $request)
+    public function store(StorePluginRequest $request)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'code' => 'required',
-            'description' => 'required',
-            'idProject' => 'required',
-        ]);
+        $projectId = $request->integer('idProject');
+        $this->tenantResources->project($request->user(), $projectId);
 
         $plugin = new Plugin;
         $plugin->name = $request->input('name');
         $plugin->code = json_encode($request->input('code'));
         $plugin->description = $request->input('description');
-        $plugin->idProject = $request->input('idProject');
-        $plugin->idCostumer = Auth::user()->idCostumer;
+        $plugin->idProject = $projectId;
+        $plugin->idCostumer = $request->user()->idCostumer;
 
         $plugin->save();
 
-        return $this->index($request, $request->input('idProject'));
+        return $this->index($request, $projectId);
     }
 
     public function show(Request $request, $idProject, $id)
     {
 
-        $row = Plugin::where('id', $id)
-            ->where('idProject', $idProject)
-            ->where('idCostumer', Auth::user()->idCostumer)
-            ->get();
-        if (count($row) == 1) {
-            return $row[0];
-        }
-
-        return response()->json(['message' => self::INVALID_DETAILS], 555);
+        return $this->tenantResources
+            ->resource($request->user(), Plugin::class, $idProject, $id)
+            ->only(['id', 'name', 'description', 'code', 'idProject']);
     }
 
-    public function update(Request $request, $idProject, $id)
+    public function update(UpdatePluginRequest $request, $idProject, $id)
     {
-        $this->validate($request, [
-            'code' => 'required',
-        ]);
-
-        $plugin = Plugin::findorFail($id);
-        if ($plugin->idCostumer != Auth::user()->idCostumer) {
-            return response()->json(['message' => self::INVALID_DETAILS], 555);
-        }
+        $plugin = $this->tenantResources->resource(
+            $request->user(),
+            Plugin::class,
+            $idProject,
+            $id
+        );
         $plugin->code = $request->input('code');
         $plugin->save();
 
@@ -75,13 +66,14 @@ class PluginController extends Controller
 
     public function destroy(Request $request, $idProject, $id)
     {
+        $plugin = $this->tenantResources->resource(
+            $request->user(),
+            Plugin::class,
+            $idProject,
+            $id
+        );
+        $plugin->delete();
 
-        $plugin = Plugin::findorFail($id);
-        if ($plugin->idCostumer != Auth::user()->idCostumer) {
-            return response()->json(['message' => self::INVALID_DETAILS], 555);
-        }
-        if ($plugin->delete()) {
-            return $this->index($request, $idProject);
-        }
+        return $this->index($request, $idProject);
     }
 }

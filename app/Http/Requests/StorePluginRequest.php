@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\ValidatesOwnedProject;
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreTestCycleRequest extends FormRequest
+class StorePluginRequest extends FormRequest
 {
     use ValidatesOwnedProject;
 
@@ -18,8 +18,8 @@ class StoreTestCycleRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'code' => ['required'],
             'description' => ['required', 'string', 'max:255'],
-            'config' => ['required'],
             'idProject' => $this->ownedProjectRules(),
         ];
     }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\UpdateProjectRequest;
 use App\Models\Environment;
 use App\Models\PerformedStep;
 use App\Models\PerformedTest;
@@ -11,31 +13,28 @@ use App\Models\Project;
 use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
+use App\Services\TenantResourceService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class ProjectController extends Controller
 {
-    const INVALID_DETAILS = 'Invalid Details';
+    public function __construct(private TenantResourceService $tenantResources) {}
 
     public function index(Request $request)
     {
-        return Project::where('idCostumer', Auth::user()->idCostumer)
+        return Project::select('id', 'name', 'description')
+            ->where('idCostumer', $request->user()->idCostumer)
             ->orderBy('created_at', 'asc')
             ->get();
     }
 
-    public function store(Request $request)
+    public function store(StoreProjectRequest $request)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'description' => 'required',
-        ]);
         $project = new Project;
         $project->name = strtoupper($request->input('name'));
         $project->description = $request->input('description');
-        $project->idCostumer = Auth::user()->idCostumer;
+        $project->idCostumer = $request->user()->idCostumer;
         $project->save();
 
         return $this->index($request);
@@ -43,27 +42,13 @@ class ProjectController extends Controller
 
     public function show(Request $request, $id)
     {
-        $row = Project::where('id', $id)
-            ->where('idCostumer', Auth::user()->idCostumer)
-            ->get();
-        if (count($row) == 1) {
-            return $row[0];
-        }
-
-        return response()->json(['message' => self::INVALID_DETAILS], 555);
+        return $this->tenantResources->project($request->user(), $id)
+            ->only(['id', 'name', 'description']);
     }
 
-    public function update(Request $request, $id)
+    public function update(UpdateProjectRequest $request, $id)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'description' => 'required',
-        ]);
-
-        $project = Project::findorFail($id);
-        if ($project->idCostumer != Auth::user()->idCostumer) {
-            return response()->json(['message' => self::INVALID_DETAILS], 555);
-        }
+        $project = $this->tenantResources->project($request->user(), $id);
         $project->name = $request->input('name');
         $project->description = $request->input('description');
         $project->save();
@@ -73,27 +58,38 @@ class ProjectController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        DB::transaction(function () use ($id) {
-            $project = Project::whereKey($id)
-                ->where('idCostumer', Auth::user()->idCostumer)
-                ->lockForUpdate()
-                ->firstOrFail();
+        $customerId = $request->user()->idCostumer;
 
-            $testCycleIds = TestCycle::where('idCostumer', Auth::user()->idCostumer)
+        DB::transaction(function () use ($request, $id, $customerId) {
+            $project = $this->tenantResources->project(
+                $request->user(),
+                $id,
+                true
+            );
+
+            $testCycleIds = TestCycle::where('idCostumer', $customerId)
                 ->where('idProject', $id)
                 ->pluck('id');
             $performedCycleIds = PerformedTestCycle::whereIn('testCycleId', $testCycleIds)
-                ->where('idCostumer', Auth::user()->idCostumer)
+                ->where('idCostumer', $customerId)
                 ->pluck('id');
 
-            PerformedStep::whereIn('testCycleDoneId', $performedCycleIds)->delete();
-            PerformedTest::whereIn('testCycleDoneId', $performedCycleIds)->delete();
-            PerformedTestCycle::whereIn('id', $performedCycleIds)->delete();
-            TestCycle::whereIn('id', $testCycleIds)->delete();
-            Environment::where('idProject', $id)->delete();
-            Plugin::where('idProject', $id)->delete();
-            Step::where('idProject', $id)->delete();
-            Test::where('idProject', $id)->delete();
+            PerformedStep::whereIn('testCycleDoneId', $performedCycleIds)
+                ->where('idCostumer', $customerId)->delete();
+            PerformedTest::whereIn('testCycleDoneId', $performedCycleIds)
+                ->where('idCostumer', $customerId)->delete();
+            PerformedTestCycle::whereIn('id', $performedCycleIds)
+                ->where('idCostumer', $customerId)->delete();
+            TestCycle::whereIn('id', $testCycleIds)
+                ->where('idCostumer', $customerId)->delete();
+            Environment::where('idProject', $id)
+                ->where('idCostumer', $customerId)->delete();
+            Plugin::where('idProject', $id)
+                ->where('idCostumer', $customerId)->delete();
+            Step::where('idProject', $id)
+                ->where('idCostumer', $customerId)->delete();
+            Test::where('idProject', $id)
+                ->where('idCostumer', $customerId)->delete();
             $project->delete();
         });
 
