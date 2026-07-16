@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\LoginRequest;
 use App\Library\GoogleVerify;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\PersonalAccessToken;
 use Validator;
 
 class LoginController extends BaseController
 {
+    public function __construct(private GoogleVerify $googleVerify) {}
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -34,41 +39,50 @@ class LoginController extends BaseController
 
     public function logout(Request $request)
     {
-        Auth::user()->tokens()->delete();
-        Auth::guard('web')->logout();
+        $accessToken = $request->user()->currentAccessToken();
+        if ($accessToken instanceof PersonalAccessToken) {
+            $accessToken->delete();
+        }
 
-        return $this->sendResponse('ok', 200);
+        Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+        Auth::forgetGuards();
+
+        return response()->noContent();
     }
 
-    public function login(Request $request)
+    public function login(LoginRequest $request)
     {
-        $googleverify = new GoogleVerify;
-        if (env('GOOGLE_KEY_SECRET') != null) {
-            $jsonGoogle = $googleverify->check($request['token'], env('GOOGLE_KEY_SECRET'));
-            if (! $jsonGoogle->success) {
+        $recaptchaSecret = config('services.recaptcha.secret');
+        if ($recaptchaSecret !== null) {
+            if (! $this->googleVerify->passes($request->input('token'), $recaptchaSecret)) {
                 return response()->json([
-                    'message' => 'Invalid gLogin details',
+                    'message' => 'Invalid login details',
                 ], 401);
             }
         }
-        if (! Auth::attempt($request->only('email', 'password'))) {
+
+        $user = User::where('email', $request->input('email'))->first();
+        if ($user === null || ! Hash::check($request->input('password'), $user->password)) {
             return response()->json([
                 'message' => 'Invalid login details',
             ], 401);
         }
-        $user = User::where('email', $request['email'])->firstOrFail();
-        $token = $user->createToken('idelium')->plainTextToken;
-        /*
-            'role'=>$user->role,
-            'costumer' => $user->idCostumer,
-            'id' => $user->id,
-        */
+
         Auth::login($user);
+        $request->session()->regenerate();
 
         return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-            'session' => 'tbd',
+            'authenticated' => true,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ],
         ]);
     }
 }

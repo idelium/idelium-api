@@ -37,10 +37,10 @@ Route::get('sanctum/csrf-cookie', [CsrfCookieController::class, 'show'])
     ->name('csrf.show');
 Route::post('login', [LoginController::class, 'login'])
     ->name('login');
-Route::get('logout', [LoginController::class, 'logout'])
-    ->name('logout');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('logout', [LoginController::class, 'logout'])
+        ->name('logout');
     /* menu */
     Route::get('menu/sidebar', [SideBarController::class, 'index'])
         ->name('sidebar.index');
@@ -213,10 +213,14 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('location.store');
     Route::put('admin/platforms/locations', [LocationController::class, 'update'])
         ->name('location.update');
-});
-
-Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
-    return $request->user();
+    Route::get('/user', function (Request $request) {
+        return response()->json([
+            'id' => $request->user()->id,
+            'name' => $request->user()->name,
+            'email' => $request->user()->email,
+            'role' => $request->user()->role,
+        ]);
+    });
 });
 
 /* command line api */

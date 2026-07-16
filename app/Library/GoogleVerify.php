@@ -2,23 +2,23 @@
 
 namespace App\Library;
 
+use Illuminate\Support\Facades\Http;
+
 class GoogleVerify
 {
-    public function check($token, $secret)
+    public function passes(?string $token, string $secret): bool
     {
-        $ch = curl_init('https://www.google.com/recaptcha/api/siteverify');
-        $postData['secret'] = $secret;
-        $postData['response'] = $token;
-        foreach ($postData as $key => $value) {
-            $postItems[] = $key.'='.$value;
+        if ($token === null || $token === '') {
+            return false;
         }
-        $postString = implode('&', $postItems);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $postString);
-        $content = curl_exec($ch);
 
-        return json_decode($content);
+        $response = Http::asForm()
+            ->timeout(5)
+            ->post('https://www.google.com/recaptcha/api/siteverify', [
+                'secret' => $secret,
+                'response' => $token,
+            ]);
+
+        return $response->successful() && $response->json('success') === true;
     }
 }
