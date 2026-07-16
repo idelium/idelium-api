@@ -39,7 +39,7 @@ class PlatformController extends Controller
         }
         $platform = new Platform;
         $platform->type = $request->input('type');
-        $platform->hostname = 'https://'.$request->input('addressname').':'.env('IDELIUM_CL_PORT');
+        $platform->hostname = 'https://'.$request->input('addressname').':'.config('idelium.client_port');
         $platform->location = $request->input('location');
         $platform->os = $request->input('os');
         $platform->osversion = $request->input('osversion');

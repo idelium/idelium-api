@@ -37,6 +37,9 @@ jobs:
       - name: Validate dependency metadata
         run: composer validate --strict --no-check-publish
 
+      - name: Audit locked dependencies
+        run: composer audit --locked --no-interaction
+
       - name: Install locked dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
@@ -45,6 +48,9 @@ jobs:
 
       - name: Check code style
         run: composer format:check
+
+      - name: Run static analysis
+        run: composer analyse
 
       - name: Exercise migrations
         env:
@@ -65,3 +71,31 @@ jobs:
           DB_CONNECTION: sqlite
           DB_DATABASE: ':memory:'
         run: composer test
+
+  coverage:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: pcov
+          tools: composer:2.10.2
+
+      - name: Install locked dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Generate coverage report
+        env:
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: vendor/bin/phpunit --coverage-clover=coverage.xml
+
+      - name: Enforce coverage threshold
+        run: composer coverage:check

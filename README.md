@@ -19,17 +19,23 @@ Run the same quality gates as CI from the repository root:
 ```bash
 composer install --no-interaction --prefer-dist
 composer validate --strict --no-check-publish
+composer audit --locked --no-interaction
 find app bootstrap config database routes tests -name '*.php' -print0 | xargs -0 -n1 php -l
 composer format:check
+composer analyse
 touch database/ci.sqlite
 APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate:fresh --force
 APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate:rollback --step=1 --force
 APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=database/ci.sqlite php artisan migrate --force
 APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=:memory: composer test
+# With PCOV or Xdebug coverage enabled:
+APP_ENV=testing APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA= DB_CONNECTION=sqlite DB_DATABASE=:memory: vendor/bin/phpunit --coverage-clover=coverage.xml
+composer coverage:check
 ```
 
-CI runs these commands on PHP 8.2, 8.3, and 8.4. Update dependencies with the
-same Composer version, review the resulting lockfile diff, and rerun all gates.
+CI runs the main quality gates on PHP 8.2, 8.3, and 8.4. A dedicated PHP 8.3
+job enforces at least 60% statement coverage. Update dependencies with the same
+Composer version, review the resulting lockfile diff, and rerun all gates.
 
 ## idelium-docker
 
