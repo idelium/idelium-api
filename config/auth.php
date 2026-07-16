@@ -44,8 +44,7 @@ return [
             'provider' => 'users',
         ],
         'api' => [
-            // 'driver' => 'cognito-token',
-            'driver' => 'passport',
+            'driver' => 'sanctum',
             'provider' => 'users',
         ],
     ],

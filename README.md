@@ -37,6 +37,9 @@ CI runs the main quality gates on PHP 8.2, 8.3, and 8.4. A dedicated PHP 8.3
 job enforces at least 60% statement coverage. Update dependencies with the same
 Composer version, review the resulting lockfile diff, and rerun all gates.
 
+Browser sessions and optional personal access tokens use Laravel Sanctum.
+OAuth2/Passport endpoints are not exposed by this service.
+
 ## idelium-docker
 
 idelium-docker is a docker project to start Idelium AS locally, as a pre-requisite you must have docker on your machine (https://www.docker.com/)
