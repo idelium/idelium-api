@@ -73,7 +73,7 @@
         ["xpath=//section[@id='contact']/div/div/div[2]/div/div[2]/div[4]/input", "xpath:idRelative"],
         ["xpath=//div[4]/input", "xpath:position"]
       ],
-      "value": "demo@idelium.io"
+      "value": "demo@idelium.org"
     }, {
       "id": "03844e41-5b72-4c57-af7b-756050041a7a",
       "comment": "Write on subject field",
