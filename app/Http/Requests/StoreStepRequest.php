@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidatesOwnedProject;
+use App\Rules\TestToolSchemaPayload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreStepRequest extends FormRequest
@@ -19,7 +20,7 @@ class StoreStepRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
-            'config' => ['required'],
+            'config' => ['required', new TestToolSchemaPayload('step')],
             'idProject' => $this->ownedProjectRules(),
         ];
     }

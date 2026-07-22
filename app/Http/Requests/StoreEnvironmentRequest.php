@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidatesOwnedProject;
+use App\Rules\TestToolSchemaPayload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreEnvironmentRequest extends FormRequest
@@ -19,7 +20,7 @@ class StoreEnvironmentRequest extends FormRequest
         return [
             'code' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
-            'config' => ['required'],
+            'config' => ['required', new TestToolSchemaPayload('environment')],
             'idProject' => $this->ownedProjectRules(),
         ];
     }

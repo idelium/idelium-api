@@ -8,6 +8,7 @@ use App\Models\PerformedTestCycle;
 use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
+use App\Rules\TestToolSchemaPayload;
 use Illuminate\Http\Request;
 
 class IdeliumInsertClController extends Controller
@@ -109,7 +110,12 @@ class IdeliumInsertClController extends Controller
             'name' => 'required|string',
             'status' => 'required|integer',
             'screenshots' => 'required|json',
-            'data' => 'required|json|max:1048576',
+            'data' => [
+                'required',
+                'json',
+                'max:1048576',
+                new TestToolSchemaPayload('result'),
+            ],
             'type' => 'required|string|in:selenium,seleniumOrAppium,postman',
         ]);
 

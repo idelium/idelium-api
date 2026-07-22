@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\TestToolSchemaPayload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateEnvironmentRequest extends FormRequest
@@ -13,6 +14,8 @@ class UpdateEnvironmentRequest extends FormRequest
 
     public function rules(): array
     {
-        return ['config' => ['required']];
+        return [
+            'config' => ['required', new TestToolSchemaPayload('environment')],
+        ];
     }
 }

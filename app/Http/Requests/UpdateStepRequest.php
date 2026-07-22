@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Rules\TestToolSchemaPayload;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateStepRequest extends FormRequest
@@ -16,7 +17,7 @@ class UpdateStepRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
-            'config' => ['required'],
+            'config' => ['required', new TestToolSchemaPayload('step')],
         ];
     }
 }
