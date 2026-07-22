@@ -22,7 +22,8 @@ Each result object uses these stable fields:
 | `assertions` | array | Individual assertion outcomes and messages. |
 
 Older CLI versions may omit `passed` and `assertions`; readers must treat those
-records as legacy results rather than successful assertions.
+records as legacy results rather than successful assertions. New Newman-based
+payloads should use `runtime: postman` and `schemaVersion: postman.newman.v1`.
 
 Authenticated Web clients retrieve the hierarchy from the performed-cycle,
 performed-test, and performed-step endpoints. Every query is scoped to the
@@ -31,5 +32,9 @@ belonging to another customer is represented by an empty collection and must not
 be disclosed.
 
 The current contract is backward compatible with existing stored JSON. New
-required fields or renamed fields require a versioned endpoint and coordinated
-CLI/Web release notes.
+required fields or renamed fields require a new schema identifier and
+coordinated CLI/Web release notes.
+
+Sensitive headers, cookies, tokens, passwords, API keys, URLs, and response
+bodies are redacted before new results are stored and before legacy results are
+served back to Web clients.

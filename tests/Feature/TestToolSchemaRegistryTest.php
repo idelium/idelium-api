@@ -94,6 +94,48 @@ class TestToolSchemaRegistryTest extends TestCase
         ]);
     }
 
+    public function test_versioned_appium_environment_payload_requires_runtime_shape(): void
+    {
+        $this->postJson('/api/admin/environments', [
+            'code' => 'mobile',
+            'description' => 'Mobile environment',
+            'config' => json_encode([
+                'runtime' => 'appium',
+                'schemaVersion' => 'appium.v2',
+                'irrelevant' => true,
+            ]),
+            'idProject' => $this->project->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['config']);
+
+        $this->postJson('/api/admin/environments', [
+            'code' => 'mobile-valid',
+            'description' => 'Mobile environment',
+            'config' => json_encode([
+                'runtime' => 'appium',
+                'schemaVersion' => 'appium.v2',
+                'appiumServer' => 'http://127.0.0.1:4723',
+                'appiumDesiredCaps' => ['platformName' => 'iOS'],
+            ]),
+            'idProject' => $this->project->id,
+        ])->assertOk()->assertJsonFragment(['code' => 'mobile-valid']);
+    }
+
+    public function test_versioned_postman_newman_step_payload_is_accepted(): void
+    {
+        $payload = [
+            'runtime' => 'postman',
+            'schemaVersion' => 'postman.newman.v1',
+            'collectionPath' => 'collections/customer-api.postman_collection.json',
+        ];
+
+        $this->postJson('/api/admin/steps', [
+            'name' => 'Newman collection',
+            'description' => 'Newman collection',
+            'config' => json_encode($payload),
+            'idProject' => $this->project->id,
+        ])->assertOk()->assertJsonFragment(['name' => 'Newman collection']);
+    }
+
     public function test_legacy_environment_payload_without_schema_metadata_is_accepted(): void
     {
         $this->postJson('/api/admin/environments', [

@@ -8,7 +8,9 @@ use App\Models\PerformedTestCycle;
 use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
+use App\Rules\TestToolResultArtifactPolicy;
 use App\Rules\TestToolSchemaPayload;
+use App\Services\TestToolResultPayloadPolicy;
 use Illuminate\Http\Request;
 
 class IdeliumInsertClController extends Controller
@@ -113,8 +115,9 @@ class IdeliumInsertClController extends Controller
             'data' => [
                 'required',
                 'json',
-                'max:1048576',
+                'max:'.config('idelium.result_payload_max_bytes'),
                 new TestToolSchemaPayload('result'),
+                new TestToolResultArtifactPolicy,
             ],
             'type' => 'required|string|in:selenium,seleniumOrAppium,postman',
         ]);
@@ -141,7 +144,8 @@ class IdeliumInsertClController extends Controller
         $step->name = $request->input('name');
         $step->status = $request->input('status');
         $step->screenshots = $request->input('screenshots');
-        $step->data = $request->input('data');
+        $step->data = app(TestToolResultPayloadPolicy::class)
+            ->redactJsonString($request->input('data'));
         $step->type = $request->input('type');
         $step->idCostumer = $customer->id;
         $step->save();

@@ -21,6 +21,12 @@ load for backward compatibility. Payloads that declare an unknown
 `schemaVersion`, omit `runtime`, or declare a runtime that does not match the
 schema are rejected with validation errors before persistence.
 
+Runtime-specific validation is intentionally additive. Versioned step,
+environment, and result payloads must contain at least one field that belongs to
+the declared runtime contract. Detailed migration rules are documented in
+[Test tool schema migration policy](schema-migration-policy.md), and performed
+result fields are documented in [Performed result contracts](result-contracts.md).
+
 ## Selenium
 
 Selenium steps are stored as JSON step definitions and reported back as

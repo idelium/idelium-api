@@ -172,6 +172,8 @@ Response and ownership contracts are documented separately:
 - [Test-cycle responses](docs/api/test-cycle-responses.md)
 - [Postman execution results](docs/api/postman-results.md)
 - [Test tool support contract](docs/api/test-tool-support.md)
+- [Test tool schema migration policy](docs/api/schema-migration-policy.md)
+- [Performed result contracts](docs/api/result-contracts.md)
 - [Transactional mutations](docs/database/transactional-mutations.md)
 
 ## Database changes
