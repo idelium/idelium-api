@@ -111,8 +111,8 @@ class TestToolResultPayloadPolicy
                 continue;
             }
 
-            if (in_array($keyString, self::BODY_KEYS, true)) {
-                $redacted[$key] = self::REDACTED_BODY;
+            if (in_array($normalizedKey, $this->normalizedBodyKeys(), true)) {
+                $redacted[$key] = $this->redactBodyValue($value);
 
                 continue;
             }
@@ -127,6 +127,37 @@ class TestToolResultPayloadPolicy
         }
 
         return $redacted;
+    }
+
+    private function redactBodyValue(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            return $this->redactNode($value);
+        }
+
+        if (! is_string($value)) {
+            return $value;
+        }
+
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) {
+            return json_encode($this->redactNode($decoded));
+        }
+
+        return $this->redactPlainTextBody($value);
+    }
+
+    private function redactPlainTextBody(string $value): string
+    {
+        $redacted = preg_replace(
+            '/\b(api[-_\s]?key|access[-_\s]?token|authorization|cookie|id[-_\s]?token|password|refresh[-_\s]?token|secret|session|sessionid|token|x[-_\s]?api[-_\s]?key)\s*([:=])\s*([^&\s,;]+)/i',
+            '$1$2'.self::REDACTED_VALUE,
+            $value
+        );
+
+        $redacted ??= $value;
+
+        return preg_replace('/\b(Bearer\s+)[A-Za-z0-9._~+\/=-]+/i', '$1'.self::REDACTED_VALUE, $redacted) ?? $redacted;
     }
 
     private function redactScalar(mixed $value, ?string $parentKey): mixed
@@ -190,6 +221,11 @@ class TestToolResultPayloadPolicy
     private function normalizeKey(string $key): string
     {
         return strtolower(str_replace(['_', ' '], '-', $key));
+    }
+
+    private function normalizedBodyKeys(): array
+    {
+        return array_map(fn (string $key) => $this->normalizeKey($key), self::BODY_KEYS);
     }
 
     private function decodePayload(mixed $payload): ?array

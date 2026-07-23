@@ -64,7 +64,7 @@ class TestToolResultContractTest extends TestCase
         $stored = PerformedStep::findOrFail($idStep);
         $storedPayload = json_decode($stored->data, true);
         $this->assertSame('[REDACTED]', $storedPayload['executions'][0]['headers']['Authorization']);
-        $this->assertSame('[REDACTED BODY]', $storedPayload['executions'][0]['response']);
+        $this->assertSame('{"token":"[REDACTED]"}', $storedPayload['executions'][0]['response']);
         $this->assertSame(
             'https://api.example.test/token?access_token=%5BREDACTED%5D&safe=yes',
             $storedPayload['executions'][0]['url']
@@ -169,7 +169,7 @@ class TestToolResultContractTest extends TestCase
             ->json('0.data');
 
         $decoded = json_decode($payload, true);
-        $this->assertSame('[REDACTED BODY]', $decoded[0]['response']);
+        $this->assertSame('{"password":"[REDACTED]"}', $decoded[0]['response']);
         $this->assertSame('[REDACTED]', $decoded[0]['headers']['Cookie']);
         $this->assertStringContainsString('api_key=%5BREDACTED%5D', $decoded[0]['url']);
 
@@ -182,6 +182,27 @@ class TestToolResultContractTest extends TestCase
             'id' => $performedStep->id,
             'idCostumer' => $this->firstCustomer->id,
         ]);
+    }
+
+    public function test_preserves_non_sensitive_postman_response_bodies(): void
+    {
+        $payload = [
+            'runtime' => 'postman',
+            'schemaVersion' => 'postman.newman.v1',
+            'executions' => [[
+                'name' => 'Read status',
+                'url' => 'https://api.example.test/status',
+                'response' => '{"message":"ok"}',
+                'assertions' => [['name' => 'status', 'passed' => true]],
+            ]],
+            'scriptFailures' => [],
+        ];
+
+        $idStep = $this->postPerformedStep($payload, 'postman')->assertOk()->json('idStep');
+
+        $stored = PerformedStep::findOrFail($idStep);
+        $storedPayload = json_decode($stored->data, true);
+        $this->assertSame('{"message":"ok"}', $storedPayload['executions'][0]['response']);
     }
 
     private function postPerformedStep(array $payload, string $type)

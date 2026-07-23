@@ -59,10 +59,7 @@ class PostmanIntegrationTest extends TestCase
             '/api/admin/stepsperfomed/'.$firstHierarchy['performedTest']->id
         )->assertOk()->assertJsonCount(1)->json('0');
         $this->assertSame('postman', $performedStep['type']);
-        $this->assertSame([[
-            ...$results[0],
-            'response' => '[REDACTED BODY]',
-        ]], json_decode($performedStep['data'], true));
+        $this->assertSame($results, json_decode($performedStep['data'], true));
         $this->assertArrayNotHasKey('idCostumer', $performedStep);
 
         $this->getJson(
