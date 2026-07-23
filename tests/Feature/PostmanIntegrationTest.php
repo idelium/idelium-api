@@ -65,12 +65,19 @@ class PostmanIntegrationTest extends TestCase
         ]], json_decode($performedStep['data'], true));
         $this->assertArrayNotHasKey('idCostumer', $performedStep);
 
+        $this->getJson(
+            '/api/admin/testsperfomed/'.$firstHierarchy['performedCycle']->id
+        )->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $firstHierarchy['performedTest']->id)
+            ->assertJsonPath('0.testCycleDoneId', $firstHierarchy['performedCycle']->id);
+
         Sanctum::actingAs($secondUser);
         $this->getJson(
             '/api/admin/stepsperfomed/'.$firstHierarchy['performedTest']->id
         )->assertOk()->assertExactJson([]);
         $this->getJson(
-            '/api/admin/testsperfomed/'.$firstHierarchy['test']->id
+            '/api/admin/testsperfomed/'.$firstHierarchy['performedCycle']->id
         )->assertOk()->assertExactJson([]);
         $this->getJson(
             '/api/admin/testcyclesperfomed/'.$firstHierarchy['testCycle']->id
@@ -80,6 +87,39 @@ class PostmanIntegrationTest extends TestCase
             $firstHierarchy['performedTest']->id,
             $secondHierarchy['performedTest']->id
         );
+    }
+
+    public function test_performed_tests_are_loaded_by_selected_performed_cycle(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user] = $this->createTenant('first');
+        $hierarchy = $this->createResultParents($customer);
+        $secondRun = PerformedTestCycle::forceCreate([
+            'testCycleId' => $hierarchy['testCycle']->id,
+            'date' => now()->addMinute(),
+            'status' => 0,
+            'idCostumer' => $customer->id,
+        ]);
+        $secondRunTest = PerformedTest::forceCreate([
+            'testCycleDoneId' => $secondRun->id,
+            'testId' => $hierarchy['test']->id,
+            'status' => 1,
+            'name' => 'API test second run',
+            'idCostumer' => $customer->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/testsperfomed/'.$hierarchy['performedCycle']->id)
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $hierarchy['performedTest']->id)
+            ->assertJsonPath('0.testCycleDoneId', $hierarchy['performedCycle']->id);
+        $this->getJson('/api/admin/testsperfomed/'.$secondRun->id)
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $secondRunTest->id)
+            ->assertJsonPath('0.testCycleDoneId', $secondRun->id);
     }
 
     public function test_cli_rejects_invalid_postman_result_payloads(): void

@@ -17,7 +17,7 @@ class PerformedTestController extends Controller
             'name',
             'updated_at',
             'created_at',
-        ])->where('testId', $id)
+        ])->where('testCycleDoneId', $id)
             ->where('idCostumer', Auth::user()->idCostumer)
             ->get();
     }
