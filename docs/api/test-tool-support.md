@@ -16,6 +16,8 @@ New test-tool payloads may declare explicit schema metadata with `runtime` and
 - `appium.v2`
 - `postman.safe.v1`
 - `postman.newman.v1`
+- `dsl.source.v1`
+- `dsl.ast.v1`
 
 Payloads without schema metadata are treated as legacy payloads and continue to
 load for backward compatibility. Payloads that declare an unknown
@@ -43,6 +45,43 @@ WebDriver BiDi diagnostics are accepted as versioned performed-result artifacts
 through `selenium.bidi.diagnostics.v1`. The API validates the BiDi artifact MIME
 type, inner schema version, server-side event limit, and tenant-scoped read path
 before exposing the redacted data to Web clients.
+
+## DSL source and canonical AST
+
+The API accepts versioned DSL step payloads without changing the legacy `steps`
+table contract:
+
+```json
+{
+  "runtime": "dsl",
+  "schemaVersion": "dsl.source.v1",
+  "languageVersion": "1.0",
+  "source": "idelium 1.0\n\ntest \"Login\" { open \"https://example.invalid\" }\n"
+}
+```
+
+Canonical AST payloads use the same runtime and language version with
+`schemaVersion: dsl.ast.v1` and an `ast` object whose root is a v1 canonical
+document:
+
+```json
+{
+  "runtime": "dsl",
+  "schemaVersion": "dsl.ast.v1",
+  "languageVersion": "1.0",
+  "ast": {
+    "kind": "document",
+    "schemaVersion": "1.0",
+    "languageVersion": "1.0",
+    "tests": []
+  }
+}
+```
+
+Boundary validation rejects missing source text, unsupported DSL versions,
+malformed AST roots, empty AST test sets, oversized DSL source payloads, and
+fields outside the declared schema. Project ownership validation still scopes
+every write to the authenticated tenant before persistence.
 
 ## Appium
 

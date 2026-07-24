@@ -51,6 +51,18 @@ class TestToolSchemaRegistry
             'environmentKeys' => ['variables', 'environment', 'environmentPath', 'globalsPath'],
             'resultKeys' => ['assertions', 'executions', 'requests', 'scriptFailures', 'console', 'logs'],
         ],
+        'dsl.source.v1' => [
+            'runtime' => 'dsl',
+            'scopes' => ['step'],
+            'legacyAliases' => [],
+            'stepKeys' => ['languageVersion', 'source'],
+        ],
+        'dsl.ast.v1' => [
+            'runtime' => 'dsl',
+            'scopes' => ['step'],
+            'legacyAliases' => [],
+            'stepKeys' => ['ast', 'languageVersion'],
+        ],
     ];
 
     public function supportedSchemaIds(): array
@@ -109,6 +121,13 @@ class TestToolSchemaRegistry
             );
         }
 
+        if ($scope === 'step') {
+            $dslError = $this->validateDslStepPayload($decoded, $schemaId);
+            if ($dslError !== null) {
+                return $dslError;
+            }
+        }
+
         return null;
     }
 
@@ -164,5 +183,51 @@ class TestToolSchemaRegistry
         }
 
         return true;
+    }
+
+    private function validateDslStepPayload(array $payload, string $schemaId): ?string
+    {
+        if (! in_array($schemaId, ['dsl.source.v1', 'dsl.ast.v1'], true)) {
+            return null;
+        }
+
+        if (($payload['languageVersion'] ?? null) !== '1.0') {
+            return 'The DSL languageVersion is not supported.';
+        }
+
+        if ($schemaId === 'dsl.source.v1') {
+            $source = $payload['source'] ?? null;
+            if (! is_string($source) || trim($source) === '') {
+                return 'The DSL source payload requires a non-empty source string.';
+            }
+
+            if (strlen($source) > 262144) {
+                return 'The DSL source payload exceeds the allowed size.';
+            }
+
+            if (! str_starts_with(ltrim($source), 'idelium 1.0')) {
+                return 'The DSL source payload must declare idelium 1.0.';
+            }
+
+            return null;
+        }
+
+        $ast = $payload['ast'] ?? null;
+        if (! is_array($ast)) {
+            return 'The DSL AST payload requires an ast object.';
+        }
+
+        if (($ast['kind'] ?? null) !== 'document'
+            || ($ast['schemaVersion'] ?? null) !== '1.0'
+            || ($ast['languageVersion'] ?? null) !== '1.0') {
+            return 'The DSL AST payload must be a canonical document with schemaVersion and languageVersion 1.0.';
+        }
+
+        $tests = $ast['tests'] ?? null;
+        if (! is_array($tests) || $tests === []) {
+            return 'The DSL AST payload requires at least one test.';
+        }
+
+        return null;
     }
 }

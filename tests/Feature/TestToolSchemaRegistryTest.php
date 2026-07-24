@@ -51,6 +51,8 @@ class TestToolSchemaRegistryTest extends TestCase
             'appium.v2',
             'postman.safe.v1',
             'postman.newman.v1',
+            'dsl.source.v1',
+            'dsl.ast.v1',
         ], $registry->supportedSchemaIds());
     }
 
@@ -157,6 +159,130 @@ class TestToolSchemaRegistryTest extends TestCase
             'config' => json_encode($payload),
             'idProject' => $this->project->id,
         ])->assertOk()->assertJsonFragment(['name' => 'Newman collection']);
+    }
+
+    public function test_versioned_dsl_source_step_payload_is_accepted(): void
+    {
+        $payload = [
+            'runtime' => 'dsl',
+            'schemaVersion' => 'dsl.source.v1',
+            'languageVersion' => '1.0',
+            'source' => "idelium 1.0\n\ntest \"Login\" {\n    open \"https://example.invalid\"\n}\n",
+        ];
+
+        $this->postJson('/api/admin/steps', [
+            'name' => 'DSL source',
+            'description' => 'DSL source',
+            'config' => json_encode($payload),
+            'idProject' => $this->project->id,
+        ])->assertOk()->assertJsonFragment(['name' => 'DSL source']);
+
+        $this->assertDatabaseHas('steps', [
+            'name' => 'DSL source',
+            'config' => json_encode($payload),
+            'idCostumer' => $this->customer->id,
+        ]);
+    }
+
+    public function test_versioned_dsl_ast_step_payload_is_accepted(): void
+    {
+        $payload = [
+            'runtime' => 'dsl',
+            'schemaVersion' => 'dsl.ast.v1',
+            'languageVersion' => '1.0',
+            'ast' => [
+                'kind' => 'document',
+                'schemaVersion' => '1.0',
+                'languageVersion' => '1.0',
+                'tests' => [[
+                    'kind' => 'test',
+                    'name' => 'Login',
+                    'statements' => [[
+                        'kind' => 'open',
+                        'url' => 'https://example.invalid',
+                    ]],
+                ]],
+            ],
+        ];
+
+        $this->postJson('/api/admin/steps', [
+            'name' => 'DSL AST',
+            'description' => 'DSL AST',
+            'config' => json_encode($payload),
+            'idProject' => $this->project->id,
+        ])->assertOk()->assertJsonFragment(['name' => 'DSL AST']);
+    }
+
+    public function test_malformed_or_unsupported_dsl_step_payloads_are_rejected(): void
+    {
+        $payloads = [
+            'missing source' => [
+                'runtime' => 'dsl',
+                'schemaVersion' => 'dsl.source.v1',
+                'languageVersion' => '1.0',
+                'source' => '',
+            ],
+            'future source language' => [
+                'runtime' => 'dsl',
+                'schemaVersion' => 'dsl.source.v1',
+                'languageVersion' => '2.0',
+                'source' => 'idelium 2.0',
+            ],
+            'invalid ast document' => [
+                'runtime' => 'dsl',
+                'schemaVersion' => 'dsl.ast.v1',
+                'languageVersion' => '1.0',
+                'ast' => [
+                    'kind' => 'document',
+                    'schemaVersion' => '1.0',
+                    'languageVersion' => '1.0',
+                    'tests' => [],
+                ],
+            ],
+            'unsupported top-level field' => [
+                'runtime' => 'dsl',
+                'schemaVersion' => 'dsl.ast.v1',
+                'languageVersion' => '1.0',
+                'source' => 'idelium 1.0',
+                'ast' => [
+                    'kind' => 'document',
+                    'schemaVersion' => '1.0',
+                    'languageVersion' => '1.0',
+                    'tests' => [['kind' => 'test', 'name' => 'Login', 'statements' => []]],
+                ],
+            ],
+        ];
+
+        foreach ($payloads as $case => $payload) {
+            $this->postJson('/api/admin/steps', [
+                'name' => 'Invalid DSL '.$case,
+                'description' => 'Invalid DSL',
+                'config' => json_encode($payload),
+                'idProject' => $this->project->id,
+            ])->assertUnprocessable()->assertJsonValidationErrors(['config']);
+        }
+    }
+
+    public function test_customer_cannot_store_dsl_step_payload_under_another_tenant_project(): void
+    {
+        $otherCustomer = $this->createCustomer('Other customer');
+        $otherProject = Project::forceCreate([
+            'name' => 'OTHER',
+            'description' => 'Other project',
+            'idCostumer' => $otherCustomer->id,
+        ]);
+
+        $this->postJson('/api/admin/steps', [
+            'name' => 'Cross tenant DSL',
+            'description' => 'Cross tenant DSL',
+            'config' => json_encode([
+                'runtime' => 'dsl',
+                'schemaVersion' => 'dsl.source.v1',
+                'languageVersion' => '1.0',
+                'source' => "idelium 1.0\n\ntest \"Login\" {}\n",
+            ]),
+            'idProject' => $otherProject->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['idProject']);
     }
 
     public function test_legacy_environment_payload_without_schema_metadata_is_accepted(): void
