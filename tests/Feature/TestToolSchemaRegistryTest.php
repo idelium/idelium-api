@@ -47,6 +47,7 @@ class TestToolSchemaRegistryTest extends TestCase
         $this->assertSame([
             'selenium.v1',
             'selenium.webdriver.v2',
+            'selenium.bidi.diagnostics.v1',
             'appium.v2',
             'postman.safe.v1',
             'postman.newman.v1',
@@ -92,6 +93,28 @@ class TestToolSchemaRegistryTest extends TestCase
             'name' => 'Unsupported command',
             'idCostumer' => $this->customer->id,
         ]);
+    }
+
+    public function test_versioned_payload_rejects_fields_outside_declared_schema(): void
+    {
+        $hierarchy = $this->createResultParents();
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->postJson('/api/ideliumcl/step', [
+                'testCycleId' => $hierarchy['performedCycle']->id,
+                'testId' => $hierarchy['performedTest']->id,
+                'stepId' => $hierarchy['step']->id,
+                'name' => 'BiDi diagnostics',
+                'status' => 1,
+                'screenshots' => json_encode([]),
+                'data' => json_encode([
+                    'runtime' => 'selenium',
+                    'schemaVersion' => 'selenium.bidi.diagnostics.v1',
+                    'artifacts' => [],
+                    'rawSessionDump' => ['unexpected' => true],
+                ]),
+                'type' => 'selenium',
+            ])->assertUnprocessable()->assertJsonValidationErrors(['data']);
     }
 
     public function test_versioned_appium_environment_payload_requires_runtime_shape(): void

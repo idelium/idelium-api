@@ -19,7 +19,13 @@ class TestToolSchemaRegistry
             'legacyAliases' => ['seleniumOrAppium'],
             'stepKeys' => ['command', 'steps', 'locator', 'target'],
             'environmentKeys' => ['browser', 'browserName', 'capabilities', 'gridUrl'],
-            'resultKeys' => ['assertions', 'artifacts', 'commandTrace', 'logs', 'networkEvents'],
+            'resultKeys' => ['assertions', 'artifacts', 'bidiArtifacts', 'commandTrace', 'logs', 'networkEvents'],
+        ],
+        'selenium.bidi.diagnostics.v1' => [
+            'runtime' => 'selenium',
+            'scopes' => ['result'],
+            'legacyAliases' => [],
+            'resultKeys' => ['artifacts', 'bidiArtifacts', 'commandTrace', 'logs', 'networkEvents'],
         ],
         'appium.v2' => [
             'runtime' => 'appium',
@@ -91,6 +97,10 @@ class TestToolSchemaRegistry
             return 'The payload schemaVersion is not supported for this API field.';
         }
 
+        if (! $this->usesAllowedTopLevelFields($decoded, $schemaId, $scope)) {
+            return 'The payload contains fields that are not supported by the declared schemaVersion.';
+        }
+
         if (! $this->hasRequiredRuntimeShape($decoded, $schemaId, $scope)) {
             return sprintf(
                 'The %s payload does not contain any fields supported by %s.',
@@ -135,5 +145,24 @@ class TestToolSchemaRegistry
         }
 
         return false;
+    }
+
+    private function usesAllowedTopLevelFields(
+        array $payload,
+        string $schemaId,
+        string $scope
+    ): bool {
+        $allowedKeys = array_merge(
+            ['runtime', 'schemaVersion', 'schema', 'metadata', 'summary', 'startedAt', 'finishedAt', 'durationMilliseconds'],
+            self::SCHEMAS[$schemaId][$scope.'Keys'] ?? []
+        );
+
+        foreach (array_keys($payload) as $key) {
+            if (! in_array((string) $key, $allowedKeys, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

@@ -12,6 +12,7 @@ New test-tool payloads may declare explicit schema metadata with `runtime` and
 
 - `selenium.v1`
 - `selenium.webdriver.v2`
+- `selenium.bidi.diagnostics.v1`
 - `appium.v2`
 - `postman.safe.v1`
 - `postman.newman.v1`
@@ -23,7 +24,8 @@ schema are rejected with validation errors before persistence.
 
 Runtime-specific validation is intentionally additive. Versioned step,
 environment, and result payloads must contain at least one field that belongs to
-the declared runtime contract. Detailed migration rules are documented in
+the declared runtime contract, and versioned payloads may not include top-level
+fields outside the declared contract. Detailed migration rules are documented in
 [Test tool schema migration policy](schema-migration-policy.md), and performed
 result fields are documented in [Performed result contracts](result-contracts.md).
 
@@ -36,6 +38,11 @@ one database transaction.
 
 The CLI is responsible for local browser drivers, Selenium Grid sessions,
 browser capabilities, screenshots, and command execution.
+
+WebDriver BiDi diagnostics are accepted as versioned performed-result artifacts
+through `selenium.bidi.diagnostics.v1`. The API validates the BiDi artifact MIME
+type, inner schema version, server-side event limit, and tenant-scoped read path
+before exposing the redacted data to Web clients.
 
 ## Appium
 

@@ -37,6 +37,34 @@ class TestToolResultPayloadPolicy
         'responseBody',
     ];
 
+    private const DIAGNOSTIC_TEXT_KEYS = [
+        'diagnostic',
+        'message',
+        'stackTrace',
+        'text',
+    ];
+
+    private const BIDI_ARTIFACT_TYPES = [
+        'application/vnd.idelium.bidi.console+json',
+        'application/vnd.idelium.bidi.network+json',
+        'application/vnd.idelium.bidi.diagnostics+json',
+    ];
+
+    private const BIDI_ARTIFACT_KEYS = [
+        'data',
+        'name',
+        'path',
+        'type',
+    ];
+
+    private const BIDI_ARTIFACT_DATA_KEYS = [
+        'droppedEvents',
+        'events',
+        'schemaVersion',
+        'totalEvents',
+        'truncated',
+    ];
+
     public function validateArtifactPolicy(mixed $payload): ?string
     {
         $decoded = $this->decodePayload($payload);
@@ -83,6 +111,14 @@ class TestToolResultPayloadPolicy
                 && is_string($value)
                 && strlen($value) > (int) config('idelium.artifact_inline_max_bytes')) {
                 return 'The result payload contains an inline artifact that exceeds the allowed size.';
+            }
+
+            if ($this->isArtifactCollectionKey((string) $key)
+                && is_array($value)) {
+                $artifactError = $this->validateBidiArtifacts($value);
+                if ($artifactError !== null) {
+                    return $artifactError;
+                }
             }
 
             $nestedError = $this->validateNode($value);
@@ -149,6 +185,8 @@ class TestToolResultPayloadPolicy
 
     private function redactPlainTextBody(string $value): string
     {
+        $value = preg_replace('/\b(Bearer\s+)[A-Za-z0-9._~+\/=-]+/i', '$1'.self::REDACTED_VALUE, $value) ?? $value;
+
         $redacted = preg_replace(
             '/\b(api[-_\s]?key|access[-_\s]?token|authorization|cookie|id[-_\s]?token|password|refresh[-_\s]?token|secret|session|sessionid|token|x[-_\s]?api[-_\s]?key)\s*([:=])\s*([^&\s,;]+)/i',
             '$1$2'.self::REDACTED_VALUE,
@@ -157,7 +195,7 @@ class TestToolResultPayloadPolicy
 
         $redacted ??= $value;
 
-        return preg_replace('/\b(Bearer\s+)[A-Za-z0-9._~+\/=-]+/i', '$1'.self::REDACTED_VALUE, $redacted) ?? $redacted;
+        return $redacted;
     }
 
     private function redactScalar(mixed $value, ?string $parentKey): mixed
@@ -168,6 +206,10 @@ class TestToolResultPayloadPolicy
 
         if ($this->normalizeKey($parentKey) === 'url') {
             return $this->redactUrl($value);
+        }
+
+        if (in_array($this->normalizeKey($parentKey), $this->normalizedDiagnosticTextKeys(), true)) {
+            return $this->redactPlainTextBody($value);
         }
 
         return $value;
@@ -218,6 +260,54 @@ class TestToolResultPayloadPolicy
         return in_array($key, ['content', 'base64', 'dataUri', 'video', 'screenshot'], true);
     }
 
+    private function isArtifactCollectionKey(string $key): bool
+    {
+        return in_array($key, ['artifacts', 'bidiArtifacts'], true);
+    }
+
+    private function validateBidiArtifacts(array $artifacts): ?string
+    {
+        foreach ($artifacts as $artifact) {
+            if (! is_array($artifact)) {
+                continue;
+            }
+
+            $type = $artifact['type'] ?? null;
+            if (! is_string($type) || ! in_array($type, self::BIDI_ARTIFACT_TYPES, true)) {
+                continue;
+            }
+
+            $unsupportedKeys = array_diff(array_keys($artifact), self::BIDI_ARTIFACT_KEYS);
+            if ($unsupportedKeys !== []) {
+                return 'The result payload contains a BiDi artifact with unsupported fields.';
+            }
+
+            $data = $artifact['data'] ?? null;
+            if (! is_array($data)) {
+                return 'The result payload contains a BiDi artifact without a data object.';
+            }
+
+            $unsupportedDataKeys = array_diff(array_keys($data), self::BIDI_ARTIFACT_DATA_KEYS);
+            if ($unsupportedDataKeys !== []) {
+                return 'The result payload contains a BiDi artifact data object with unsupported fields.';
+            }
+
+            if (($data['schemaVersion'] ?? null) !== '1.0') {
+                return 'The result payload contains a BiDi artifact with an unsupported schemaVersion.';
+            }
+
+            if (isset($data['events']) && ! is_array($data['events'])) {
+                return 'The result payload contains a BiDi artifact with invalid events.';
+            }
+
+            if (count($data['events'] ?? []) > (int) config('idelium.bidi_artifact_max_events')) {
+                return 'The result payload contains a BiDi artifact with too many events.';
+            }
+        }
+
+        return null;
+    }
+
     private function normalizeKey(string $key): string
     {
         return strtolower(str_replace(['_', ' '], '-', $key));
@@ -226,6 +316,11 @@ class TestToolResultPayloadPolicy
     private function normalizedBodyKeys(): array
     {
         return array_map(fn (string $key) => $this->normalizeKey($key), self::BODY_KEYS);
+    }
+
+    private function normalizedDiagnosticTextKeys(): array
+    {
+        return array_map(fn (string $key) => $this->normalizeKey($key), self::DIAGNOSTIC_TEXT_KEYS);
     }
 
     private function decodePayload(mixed $payload): ?array

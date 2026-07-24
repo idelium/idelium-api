@@ -97,6 +97,99 @@ class TestToolResultContractTest extends TestCase
         $this->postPerformedStep($appiumPayload, 'seleniumOrAppium')->assertOk();
     }
 
+    public function test_accepts_versioned_bidi_artifacts_and_redacts_tenant_scoped_reads(): void
+    {
+        $payload = [
+            'runtime' => 'selenium',
+            'schemaVersion' => 'selenium.bidi.diagnostics.v1',
+            'artifacts' => [[
+                'name' => 'bidi-diagnostics',
+                'type' => 'application/vnd.idelium.bidi.diagnostics+json',
+                'path' => '',
+                'data' => [
+                    'schemaVersion' => '1.0',
+                    'totalEvents' => 1,
+                    'droppedEvents' => 0,
+                    'truncated' => false,
+                    'events' => [[
+                        'type' => 'script.exceptionThrown',
+                        'sequence' => 1,
+                        'url' => 'https://app.example.test/dashboard?token=secret-token',
+                        'message' => 'Authorization=Bearer secret-token',
+                    ]],
+                ],
+            ]],
+        ];
+
+        $this->postPerformedStep($payload, 'selenium')->assertOk();
+
+        Sanctum::actingAs($this->firstUser);
+        $data = $this->getJson('/api/admin/stepsperfomed/'.$this->firstHierarchy['performedTest']->id)
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->json('0.data');
+
+        $decoded = json_decode($data, true);
+        $event = $decoded['artifacts'][0]['data']['events'][0];
+        $this->assertStringContainsString('token=%5BREDACTED%5D', $event['url']);
+        $this->assertStringContainsString('[REDACTED]', $event['message']);
+        $this->assertStringNotContainsString('secret-token', $event['message']);
+
+        Sanctum::actingAs($this->secondUser);
+        $this->getJson('/api/admin/stepsperfomed/'.$this->firstHierarchy['performedTest']->id)
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
+    public function test_rejects_bidi_artifacts_with_unbounded_or_unknown_fields(): void
+    {
+        $payload = [
+            'runtime' => 'selenium',
+            'schemaVersion' => 'selenium.bidi.diagnostics.v1',
+            'artifacts' => [[
+                'name' => 'bidi-diagnostics',
+                'type' => 'application/vnd.idelium.bidi.diagnostics+json',
+                'path' => '',
+                'rawSession' => ['unexpected' => true],
+                'data' => [
+                    'schemaVersion' => '1.0',
+                    'totalEvents' => 0,
+                    'droppedEvents' => 0,
+                    'truncated' => false,
+                    'events' => [],
+                ],
+            ]],
+        ];
+
+        $this->postPerformedStep($payload, 'selenium')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['data']);
+    }
+
+    public function test_rejects_bidi_artifacts_with_too_many_events(): void
+    {
+        $payload = [
+            'runtime' => 'selenium',
+            'schemaVersion' => 'selenium.bidi.diagnostics.v1',
+            'artifacts' => [[
+                'name' => 'bidi-diagnostics',
+                'type' => 'application/vnd.idelium.bidi.diagnostics+json',
+                'path' => '',
+                'data' => [
+                    'schemaVersion' => '1.0',
+                    'totalEvents' => 101,
+                    'droppedEvents' => 0,
+                    'truncated' => false,
+                    'events' => array_fill(0, 101, ['type' => 'browsingContext.load']),
+                ],
+            ]],
+        ];
+
+        $this->postPerformedStep($payload, 'selenium')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['data']);
+    }
+
     public function test_rejects_oversized_inline_artifacts(): void
     {
         $payload = [
