@@ -83,6 +83,8 @@ Route::middleware('auth:sanctum')->group(function () {
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
     /* parallel runs */
+    Route::get('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
+        ->name('parallelruns.index');
     Route::post('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
         ->name('parallelruns.store');
     Route::get('admin/projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])
@@ -239,6 +241,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 /* command line api */
 Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
+    Route::get('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
+        ->name('cl.parallelruns.index');
     Route::post('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
         ->name('cl.parallelruns.store');
     Route::get('projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])

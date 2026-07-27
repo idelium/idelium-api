@@ -95,6 +95,23 @@ class ParallelRunScheduleApiTest extends TestCase
         $this->assertDatabaseCount('parallel_run_schedules', 0);
     }
 
+    public function test_sanctum_user_lists_only_own_project_parallel_runs(): void
+    {
+        Sanctum::actingAs($this->createUser($this->firstCustomer));
+
+        $ownSchedule = $this->createSchedule($this->firstCustomer, $this->firstProject, $this->firstCycle);
+        $this->createSchedule($this->secondCustomer, $this->secondProject, $this->secondCycle);
+
+        $this->getJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs')
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.id', $ownSchedule->id)
+            ->assertJsonMissingPath('0.idCostumer');
+
+        $this->getJson('/api/admin/projects/'.$this->secondProject->id.'/parallel-runs')
+            ->assertNotFound();
+    }
+
     public function test_cli_key_cannot_read_or_mutate_another_customer_parallel_run(): void
     {
         $schedule = $this->createSchedule($this->secondCustomer, $this->secondProject, $this->secondCycle);

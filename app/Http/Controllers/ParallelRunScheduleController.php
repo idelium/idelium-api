@@ -22,6 +22,22 @@ class ParallelRunScheduleController extends Controller
         ParallelRunSchedule::STATUS_FAILED,
     ];
 
+    public function index(Request $request, int $idProject): JsonResponse
+    {
+        $customer = $this->customerFromRequest($request);
+        $this->ownedProject($customer, $idProject);
+
+        $schedules = ParallelRunSchedule::where('idProject', $idProject)
+            ->where('idCostumer', $customer->id)
+            ->orderByDesc('updated_at')
+            ->limit(50)
+            ->get()
+            ->map(fn (ParallelRunSchedule $schedule) => $this->scheduleResponse($schedule))
+            ->values();
+
+        return response()->json($schedules);
+    }
+
     public function store(Request $request, int $idProject): JsonResponse
     {
         $customer = $this->customerFromRequest($request);

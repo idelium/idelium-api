@@ -14,6 +14,7 @@ existence is not leaked.
 ## Web routes
 
 - `POST /api/admin/projects/{idProject}/parallel-runs`
+- `GET /api/admin/projects/{idProject}/parallel-runs`
 - `GET /api/admin/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/claim`
 - `PUT /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}`
@@ -23,6 +24,7 @@ existence is not leaked.
 ## CLI routes
 
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs`
+- `GET /api/ideliumcl/projects/{idProject}/parallel-runs`
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/claim`
 - `PUT /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}`
