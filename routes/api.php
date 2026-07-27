@@ -12,6 +12,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ModelDeviceController;
 use App\Http\Controllers\OsController;
+use App\Http\Controllers\ParallelRunScheduleController;
 use App\Http\Controllers\PerformedStepController;
 use App\Http\Controllers\PerformedTestController;
 use App\Http\Controllers\PerformedTestCycleController;
@@ -81,6 +82,19 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('costumers.updateKey');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
+    /* parallel runs */
+    Route::post('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
+        ->name('parallelruns.store');
+    Route::get('admin/projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])
+        ->name('parallelruns.show');
+    Route::post('admin/projects/{idProject}/parallel-runs/{parallelRun}/claim', [ParallelRunScheduleController::class, 'claimWorker'])
+        ->name('parallelruns.claimWorker');
+    Route::put('admin/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}', [ParallelRunScheduleController::class, 'updateWorker'])
+        ->name('parallelruns.updateWorker');
+    Route::post('admin/projects/{idProject}/parallel-runs/{parallelRun}/cancel', [ParallelRunScheduleController::class, 'cancel'])
+        ->name('parallelruns.cancel');
+    Route::get('admin/projects/{idProject}/parallel-runs/{parallelRun}/results', [ParallelRunScheduleController::class, 'results'])
+        ->name('parallelruns.results');
     /* testlauncher */
     Route::post('admin/launchtest', [TestLauncherController::class, 'launchTest'])
         ->name('testlauncher.launchTest');
@@ -225,6 +239,19 @@ Route::middleware('auth:sanctum')->group(function () {
 
 /* command line api */
 Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
+    Route::post('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
+        ->name('cl.parallelruns.store');
+    Route::get('projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])
+        ->name('cl.parallelruns.show');
+    Route::post('projects/{idProject}/parallel-runs/{parallelRun}/claim', [ParallelRunScheduleController::class, 'claimWorker'])
+        ->name('cl.parallelruns.claimWorker');
+    Route::put('projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}', [ParallelRunScheduleController::class, 'updateWorker'])
+        ->name('cl.parallelruns.updateWorker');
+    Route::post('projects/{idProject}/parallel-runs/{parallelRun}/cancel', [ParallelRunScheduleController::class, 'cancel'])
+        ->name('cl.parallelruns.cancel');
+    Route::get('projects/{idProject}/parallel-runs/{parallelRun}/results', [ParallelRunScheduleController::class, 'results'])
+        ->name('cl.parallelruns.results');
+
     Route::get('testcycle/{idTestCycle}', [IdeliumClController::class, 'getTestCycle'])
         ->name('cl.getTestCycle');
     Route::get('test/{idTest}', [IdeliumClController::class, 'getTest'])
