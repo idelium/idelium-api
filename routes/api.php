@@ -156,6 +156,14 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}',
         [ArtifactDescriptorController::class, 'show']
     )->name('artifacts.show');
+    Route::put(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/legal-hold',
+        [ArtifactDescriptorController::class, 'legalHold']
+    )->name('artifacts.legalHold');
+    Route::post(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/delete-marker',
+        [ArtifactDescriptorController::class, 'markDeleted']
+    )->name('artifacts.markDeleted');
     /* testlauncher */
     Route::post('admin/launchtest', [TestLauncherController::class, 'launchTest'])
         ->name('testlauncher.launchTest');

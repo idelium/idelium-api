@@ -15,12 +15,20 @@ state, and retention without exposing storage internals to the Web UI.
   larger than `IDELIUM_ARTIFACT_MAX_SIZE_BYTES`.
 - Stable lifecycle states are `available`, `expired`, `quarantined`,
   `unavailable`, and `deleted`.
+- Legal hold is stored in descriptor metadata and prevents deletion markers
+  while enabled.
 - Web clients should enable artifact actions only from these descriptors.
 
 ## Endpoints
 
 - `GET /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts`
 - `GET /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}`
+- `PUT /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/legal-hold`
+- `POST /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/delete-marker`
+
+The legal-hold and delete-marker endpoints require the `artifacts.manage`
+capability and record audit events. Delete markers are rejected while legal hold
+is enabled.
 
 ## Migration Policy
 

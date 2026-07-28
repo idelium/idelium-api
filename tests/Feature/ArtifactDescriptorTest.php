@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\ArtifactDescriptor;
+use App\Models\AuditEvent;
 use App\Models\Costumer;
 use App\Models\PerformedTestCycle;
 use App\Models\Project;
@@ -112,6 +113,96 @@ class ArtifactDescriptorTest extends TestCase
                 '/api/admin/projects/'.$this->firstProject->id
                 .'/performed-test-cycles/'.$this->firstRun->id
                 .'/artifacts/'.$foreignDescriptor->id
+            )
+            ->assertNotFound();
+    }
+
+    public function test_artifact_legal_hold_blocks_delete_marker_until_released(): void
+    {
+        $admin = $this->createUser($this->firstCustomer, 2);
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'held.json'
+        );
+        $basePath = '/api/admin/projects/'.$this->firstProject->id
+            .'/performed-test-cycles/'.$this->firstRun->id
+            .'/artifacts/'.$descriptor->id;
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->putJson($basePath.'/legal-hold', [
+                'enabled' => true,
+                'reason' => 'Investigation hold',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.metadata.legalHold.enabled', true)
+            ->assertJsonPath('data.metadata.legalHold.reason', 'Investigation hold');
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->postJson($basePath.'/delete-marker')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.artifact.0', 'Artifact is under legal hold and cannot be deleted.');
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->putJson($basePath.'/legal-hold', [
+                'enabled' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.metadata.legalHold.enabled', false)
+            ->assertJsonPath('data.metadata.legalHold.reason', null);
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->postJson($basePath.'/delete-marker')
+            ->assertOk()
+            ->assertJsonPath('data.state', ArtifactDescriptor::STATE_DELETED);
+
+        $this->assertSame(2, AuditEvent::where('action', 'artifact.legal_hold')->count());
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.mark_deleted')->count());
+    }
+
+    public function test_user_without_artifact_manage_cannot_change_legal_hold(): void
+    {
+        $user = $this->createUser($this->firstCustomer, 3);
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'readonly.json'
+        );
+
+        $this->actingAs($user)
+            ->withHeader('Origin', 'https://localhost')
+            ->putJson(
+                '/api/admin/projects/'.$this->firstProject->id
+                .'/performed-test-cycles/'.$this->firstRun->id
+                .'/artifacts/'.$descriptor->id.'/legal-hold',
+                ['enabled' => true]
+            )
+            ->assertForbidden();
+    }
+
+    public function test_cross_tenant_legal_hold_is_not_found(): void
+    {
+        $admin = $this->createUser($this->firstCustomer, 2);
+        $foreignDescriptor = $this->createDescriptor(
+            $this->secondCustomer,
+            $this->secondProject,
+            $this->secondRun,
+            'foreign.json'
+        );
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->putJson(
+                '/api/admin/projects/'.$this->firstProject->id
+                .'/performed-test-cycles/'.$this->firstRun->id
+                .'/artifacts/'.$foreignDescriptor->id.'/legal-hold',
+                ['enabled' => true]
             )
             ->assertNotFound();
     }
