@@ -266,6 +266,8 @@ Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
         ->name('cl.parallelruns.show');
     Route::post('projects/{idProject}/parallel-runs/{parallelRun}/claim', [ParallelRunScheduleController::class, 'claimWorker'])
         ->name('cl.parallelruns.claimWorker');
+    Route::post('projects/{idProject}/parallel-runs/{parallelRun}/tokens', [ParallelRunScheduleController::class, 'issueRunToken'])
+        ->name('cl.parallelruns.issueRunToken');
     Route::put('projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}', [ParallelRunScheduleController::class, 'updateWorker'])
         ->name('cl.parallelruns.updateWorker');
     Route::post('projects/{idProject}/parallel-runs/{parallelRun}/cancel', [ParallelRunScheduleController::class, 'cancel'])

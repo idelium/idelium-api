@@ -6,6 +6,7 @@ use App\Models\Costumer;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\TestCycle;
+use App\Services\RunTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,8 @@ class ParallelRunScheduleController extends Controller
         ParallelRunSchedule::STATUS_COMPLETED,
         ParallelRunSchedule::STATUS_FAILED,
     ];
+
+    public function __construct(private readonly RunTokenService $runTokens) {}
 
     public function index(Request $request, int $idProject): JsonResponse
     {
@@ -103,6 +106,13 @@ class ParallelRunScheduleController extends Controller
             'workerId' => ['required', 'string', 'max:128'],
             'capabilities' => ['sometimes', 'array'],
         ]);
+        $this->consumeRunTokenIfPresent(
+            $request,
+            $customer->id,
+            $idProject,
+            $parallelRun,
+            $validated['workerId']
+        );
 
         $schedule = DB::transaction(function () use (
             $customer,
@@ -154,6 +164,25 @@ class ParallelRunScheduleController extends Controller
         });
 
         return response()->json($this->scheduleResponse($schedule));
+    }
+
+    public function issueRunToken(
+        Request $request,
+        int $idProject,
+        int $parallelRun
+    ): JsonResponse {
+        $customer = $this->customerFromRequest($request);
+        $validated = $request->validate([
+            'agentId' => ['required', 'string', 'max:128'],
+        ]);
+        $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun);
+        $issued = $this->runTokens->issue($schedule, $validated['agentId']);
+
+        return response()->json([
+            'token' => $issued['token'],
+            'expiresAt' => $issued['runToken']->expiresAt->toISOString(),
+            'agentId' => $issued['runToken']->agentId,
+        ], 201);
     }
 
     public function updateWorker(
@@ -285,6 +314,21 @@ class ParallelRunScheduleController extends Controller
         }
 
         return Costumer::findOrFail(Auth::user()->idCostumer);
+    }
+
+    private function consumeRunTokenIfPresent(
+        Request $request,
+        int $tenantId,
+        int $projectId,
+        int $parallelRun,
+        string $workerId
+    ): void {
+        $token = $request->header('Idelium-Run-Token');
+        if (! is_string($token) || $token === '') {
+            return;
+        }
+
+        $this->runTokens->consume($token, $tenantId, $projectId, $parallelRun, $workerId);
     }
 
     private function ownedProject(
