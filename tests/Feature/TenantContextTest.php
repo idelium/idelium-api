@@ -66,15 +66,21 @@ class TenantContextTest extends TestCase
             'idCostumer' => $this->secondCustomer->id,
         ]);
         $this->actingAs($superadmin);
+        $expiresAt = now()->addMinutes(15)->toISOString();
 
         $this->withHeader('Origin', 'https://localhost')
             ->withSession([])
-            ->putJson('/api/menu/header/'.$this->secondCustomer->id)
+            ->putJson('/api/menu/header/'.$this->secondCustomer->id, [
+                'reason' => 'Support investigation',
+                'expiresAt' => $expiresAt,
+            ])
             ->assertOk()
             ->assertJsonPath('tenantContext.actorUserId', $superadmin->id)
             ->assertJsonPath('tenantContext.actorTenantId', $this->firstCustomer->id)
             ->assertJsonPath('tenantContext.activeTenantId', $this->secondCustomer->id)
-            ->assertJsonPath('tenantContext.impersonating', true);
+            ->assertJsonPath('tenantContext.impersonating', true)
+            ->assertJsonPath('tenantContext.impersonationReason', 'Support investigation')
+            ->assertJsonPath('tenantContext.impersonationExpiresAt', $expiresAt);
 
         $this->assertSame($this->firstCustomer->id, $superadmin->fresh()->idCostumer);
 
@@ -85,8 +91,53 @@ class TenantContextTest extends TestCase
             ->assertJsonPath('tenantContext.actorTenantId', $this->firstCustomer->id)
             ->assertJsonPath('tenantContext.activeTenantId', $this->secondCustomer->id)
             ->assertJsonPath('tenantContext.impersonating', true)
+            ->assertJsonPath('tenantContext.impersonationReason', 'Support investigation')
+            ->assertJsonPath('tenantContext.impersonationExpiresAt', $expiresAt)
             ->assertJsonCount(1, 'projects')
             ->assertJsonPath('projects.0.id', $secondProject->id);
+    }
+
+    public function test_superadmin_tenant_switch_requires_reason_and_expiry(): void
+    {
+        $superadmin = $this->createUser($this->firstCustomer, 1, 'root@example.test');
+        $this->actingAs($superadmin);
+
+        $this->withHeader('Origin', 'https://localhost')
+            ->withSession([])
+            ->putJson('/api/menu/header/'.$this->secondCustomer->id)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['reason', 'expiresAt']);
+    }
+
+    public function test_expired_impersonation_context_returns_to_actor_tenant(): void
+    {
+        $superadmin = $this->createUser($this->firstCustomer, 1, 'root@example.test');
+        $firstProject = Project::forceCreate([
+            'name' => 'First project',
+            'description' => 'First project',
+            'idCostumer' => $this->firstCustomer->id,
+        ]);
+        Project::forceCreate([
+            'name' => 'Second project',
+            'description' => 'Second project',
+            'idCostumer' => $this->secondCustomer->id,
+        ]);
+        $this->actingAs($superadmin);
+
+        $this->withHeader('Origin', 'https://localhost')
+            ->withSession([
+                ResolveTenantContext::SESSION_ACTIVE_TENANT => $this->secondCustomer->id,
+                ResolveTenantContext::SESSION_IMPERSONATION_REASON => 'Expired support case',
+                ResolveTenantContext::SESSION_IMPERSONATION_EXPIRES_AT => now()->subMinute()->toISOString(),
+            ])
+            ->getJson('/api/menu/header')
+            ->assertOk()
+            ->assertJsonPath('tenantContext.activeTenantId', $this->firstCustomer->id)
+            ->assertJsonPath('tenantContext.impersonating', false)
+            ->assertJsonPath('tenantContext.impersonationReason', null)
+            ->assertJsonPath('tenantContext.impersonationExpiresAt', null)
+            ->assertJsonCount(1, 'projects')
+            ->assertJsonPath('projects.0.id', $firstProject->id);
     }
 
     public function test_missing_switched_tenant_returns_standard_not_found_envelope(): void
@@ -96,7 +147,10 @@ class TenantContextTest extends TestCase
 
         $this->withHeader('Origin', 'https://localhost')
             ->withSession([])
-            ->putJson('/api/menu/header/999')
+            ->putJson('/api/menu/header/999', [
+                'reason' => 'Support investigation',
+                'expiresAt' => now()->addMinutes(15)->toISOString(),
+            ])
             ->assertNotFound()
             ->assertExactJson([
                 'message' => 'Tenant was not found.',

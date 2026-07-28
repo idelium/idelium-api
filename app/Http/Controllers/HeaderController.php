@@ -33,6 +33,8 @@ class HeaderController extends Controller
             'actorTenantId' => $this->tenantContext($request)->actorTenantId,
             'activeTenantId' => $this->tenantContext($request)->activeTenantId,
             'impersonating' => $this->tenantContext($request)->isImpersonating(),
+            'impersonationReason' => $this->tenantContext($request)->impersonationReason,
+            'impersonationExpiresAt' => $this->tenantContext($request)->impersonationExpiresAt,
         ];
 
         return response()->json($header);
@@ -44,6 +46,10 @@ class HeaderController extends Controller
         $targetTenantId = (int) $id;
 
         $this->capabilities->require($user, 'tenant.switch');
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:255'],
+            'expiresAt' => ['required', 'date', 'after:now'],
+        ]);
 
         if (! $request->hasSession()) {
             return response()->json([
@@ -68,9 +74,22 @@ class HeaderController extends Controller
             ResolveTenantContext::SESSION_ACTIVE_TENANT,
             $targetTenantId
         );
+        $request->session()->put(
+            ResolveTenantContext::SESSION_IMPERSONATION_REASON,
+            $validated['reason']
+        );
+        $request->session()->put(
+            ResolveTenantContext::SESSION_IMPERSONATION_EXPIRES_AT,
+            $validated['expiresAt']
+        );
         $request->attributes->set(
             ResolveTenantContext::ATTRIBUTE,
-            TenantContext::forUser($user, $targetTenantId)
+            TenantContext::forUser(
+                $user,
+                $targetTenantId,
+                $validated['reason'],
+                $validated['expiresAt'],
+            )
         );
 
         $this->auditEvents->record(
@@ -84,6 +103,8 @@ class HeaderController extends Controller
             afterValues: [
                 'activeTenantId' => $targetTenantId,
                 'sessionToken' => $request->session()->getId(),
+                'reason' => $validated['reason'],
+                'expiresAt' => $validated['expiresAt'],
             ],
         );
 
@@ -93,6 +114,8 @@ class HeaderController extends Controller
                 'actorTenantId' => (int) $user->getOriginal('idCostumer'),
                 'activeTenantId' => $targetTenantId,
                 'impersonating' => $targetTenantId !== (int) $user->getOriginal('idCostumer'),
+                'impersonationReason' => $validated['reason'],
+                'impersonationExpiresAt' => $validated['expiresAt'],
             ],
         ]);
     }

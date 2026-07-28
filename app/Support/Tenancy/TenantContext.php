@@ -15,7 +15,12 @@ class TenantContext
         public readonly ?string $impersonationExpiresAt = null,
     ) {}
 
-    public static function forUser(User $user, ?int $activeTenantId = null): self
+    public static function forUser(
+        User $user,
+        ?int $activeTenantId = null,
+        ?string $impersonationReason = null,
+        ?string $impersonationExpiresAt = null,
+    ): self
     {
         $actorTenantId = (int) $user->idCostumer;
 
@@ -23,6 +28,8 @@ class TenantContext
             actorUserId: (int) $user->id,
             actorTenantId: $actorTenantId,
             activeTenantId: $activeTenantId ?? $actorTenantId,
+            impersonationReason: $impersonationReason,
+            impersonationExpiresAt: $impersonationExpiresAt,
         );
     }
 

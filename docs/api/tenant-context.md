@@ -17,6 +17,11 @@ data access.
   `TENANT_SWITCH_FORBIDDEN` error code.
 - Missing target tenants return HTTP 404 with the stable `TENANT_NOT_FOUND`
   error code.
+- Tenant switches require a reason and expiry. The reason and expiry are
+  returned in `tenantContext` so the Web console can show a persistent
+  impersonation banner.
+- Expired impersonation context is cleared automatically and the request falls
+  back to the actor tenant.
 
 ## Migration Policy
 
@@ -25,5 +30,6 @@ than from session state or request payloads. Existing controllers should be
 migrated incrementally to consume `TenantContext` directly and avoid duplicating
 role checks.
 
-Safe impersonation still requires a dedicated reason, expiry, audit event, and
-visible Web banner before the roadmap item can be considered complete.
+Safe impersonation still requires Web banner integration and broader
+cross-resource negative-security coverage before the roadmap item can be
+considered complete.

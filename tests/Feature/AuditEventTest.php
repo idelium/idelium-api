@@ -44,7 +44,10 @@ class AuditEventTest extends TestCase
             ->withHeader('Origin', 'https://localhost')
             ->withHeader(CorrelateRequests::HEADER, $correlationId)
             ->withSession([])
-            ->putJson('/api/menu/header/'.$this->secondCustomer->id)
+            ->putJson('/api/menu/header/'.$this->secondCustomer->id, [
+                'reason' => 'Support investigation',
+                'expiresAt' => now()->addMinutes(15)->toISOString(),
+            ])
             ->assertOk()
             ->assertHeader(CorrelateRequests::HEADER, $correlationId);
 
