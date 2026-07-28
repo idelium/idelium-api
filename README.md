@@ -127,6 +127,18 @@ Leave optional integrations disabled or empty when they are not used. Any
 credential must be injected by the deployment secret provider, never embedded
 in source or Compose configuration.
 
+### Remote launcher TLS
+
+Remote launcher endpoints must use HTTPS. Certificate and hostname verification
+are enabled by default with finite connection and response timeouts. Private
+certificate authorities are supported through a read-only CA bundle; disabling
+verification is restricted to an explicit local-development mode and is refused
+in production.
+
+See [Remote launcher TLS policy](docs/api/remote-launch-tls.md) for configuration
+variables, safe private-CA deployment, error behavior, and the migration from
+legacy `http://` platform hostnames.
+
 ## Authentication
 
 ### Browser application
@@ -174,6 +186,7 @@ Response and ownership contracts are documented separately:
 - [Test tool support contract](docs/api/test-tool-support.md)
 - [Test tool schema migration policy](docs/api/schema-migration-policy.md)
 - [Performed result contracts](docs/api/result-contracts.md)
+- [Remote launcher TLS policy](docs/api/remote-launch-tls.md)
 - [Transactional mutations](docs/database/transactional-mutations.md)
 
 ## Database changes

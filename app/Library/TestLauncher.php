@@ -2,30 +2,14 @@
 
 namespace App\Library;
 
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
+
 class TestLauncher
 {
-    public function getHeaders($respHeaders)
-    {
-        $headers = [];
-
-        $headerText = substr($respHeaders, 0, strpos($respHeaders, "\r\n\r\n"));
-
-        foreach (explode("\r\n", $headerText) as $i => $line) {
-            if ($i === 0) {
-                $headers['http_code'] = $line;
-            } else {
-                [$key, $value] = explode(': ', $line);
-
-                $headers[$key] = $value;
-            }
-        }
-
-        return $headers;
-    }
-
     public function launch($host, $browser, $idTestCycle, $idProject, $environment, $key)
     {
-        $ch = curl_init($host.'/launchtest');
+        $endpoint = $this->endpoint($host);
         $data = [
             'idTestCycle' => $idTestCycle,
             'idProject' => $idProject,
@@ -34,29 +18,103 @@ class TestLauncher
             'key' => $key,
             'host' => $host,
         ];
-        $data_string = json_encode($data);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_VERBOSE, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-        curl_setopt($ch, CURLOPT_POST, false);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
-        curl_setopt($ch, CURLOPT_HEADER, true);
-        curl_setopt(
-            $ch,
-            CURLOPT_HTTPHEADER,
-            [
-                'Content-Type:application/json',
-                'Content-Length: '.strlen($data_string),
-            ]
-        );
-        $content = curl_exec($ch);
-        $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-        curl_close($ch);
-        $header = substr($content, 0, $headerSize);
-        $header = $this->getHeaders($header);
 
-        // extract body
-        return substr($content, $headerSize);
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->connectTimeout($this->positiveTimeout('connect_timeout'))
+                ->timeout($this->positiveTimeout('timeout'))
+                ->withOptions([
+                    'verify' => $this->tlsVerification(),
+                ])
+                ->send('GET', $endpoint, [
+                    'json' => $data,
+                ]);
+        } catch (ConnectionException) {
+            throw new TestLauncherException(
+                'launcher_connection_failed',
+                'The remote launcher connection failed. Verify its TLS certificate and the configured CA bundle.',
+                502
+            );
+        }
+
+        if (! $response->successful()) {
+            throw new TestLauncherException(
+                'launcher_upstream_error',
+                'The remote launcher rejected the request.',
+                502
+            );
+        }
+
+        return $response->body();
+    }
+
+    /**
+     * Resolve the certificate verification mode used by the remote launcher.
+     */
+    public function tlsVerification(): bool|string
+    {
+        if ((bool) config('idelium.launcher.insecure', false)) {
+            if (! app()->environment(['local', 'testing'])) {
+                throw new TestLauncherException(
+                    'launcher_invalid_tls_configuration',
+                    'TLS verification cannot be disabled outside a development environment.',
+                    500
+                );
+            }
+
+            return false;
+        }
+
+        $caBundle = trim((string) config('idelium.launcher.ca_bundle', ''));
+        if ($caBundle === '') {
+            return true;
+        }
+
+        if (! is_file($caBundle) || ! is_readable($caBundle)) {
+            throw new TestLauncherException(
+                'launcher_invalid_tls_configuration',
+                'The configured remote launcher CA bundle is not readable.',
+                500
+            );
+        }
+
+        return $caBundle;
+    }
+
+    private function endpoint(string $host): string
+    {
+        $parts = parse_url($host);
+        if (
+            $parts === false
+            || ($parts['scheme'] ?? null) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+        ) {
+            throw new TestLauncherException(
+                'launcher_invalid_endpoint',
+                'The remote launcher endpoint must be a valid HTTPS URL without credentials, query parameters, or fragments.',
+                422
+            );
+        }
+
+        return rtrim($host, '/').'/launchtest';
+    }
+
+    private function positiveTimeout(string $name): float
+    {
+        $timeout = (float) config('idelium.launcher.'.$name);
+        if ($timeout <= 0) {
+            throw new TestLauncherException(
+                'launcher_invalid_configuration',
+                'Remote launcher timeouts must be greater than zero.',
+                500
+            );
+        }
+
+        return $timeout;
     }
 }

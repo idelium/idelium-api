@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Library\TestLauncher;
+use App\Library\TestLauncherException;
 use App\Models\Browser;
 use App\Models\Costumer;
 use App\Models\Platform;
@@ -28,14 +29,23 @@ class TestLauncherController extends Controller
             $apiKey = $costumers[0];
             $launcher = new TestLauncher;
 
-            return $launcher->launch(
-                $platform->hostname,
-                $browser->name,
-                $request->input('idTestCycle'),
-                $request->input('idProject'),
-                $request->input('environment'),
-                $apiKey->apiKey
-            );
+            try {
+                return $launcher->launch(
+                    $platform->hostname,
+                    $browser->name,
+                    $request->input('idTestCycle'),
+                    $request->input('idProject'),
+                    $request->input('environment'),
+                    $apiKey->apiKey
+                );
+            } catch (TestLauncherException $exception) {
+                return response()->json([
+                    'error' => [
+                        'code' => $exception->errorCode,
+                        'message' => $exception->getMessage(),
+                    ],
+                ], $exception->httpStatus);
+            }
         }
 
         return response()->json('ko');

@@ -6,4 +6,10 @@ return [
     'artifact_inline_max_bytes' => env('IDELIUM_ARTIFACT_INLINE_MAX_BYTES', 262144),
     'artifact_collection_max_items' => env('IDELIUM_ARTIFACT_COLLECTION_MAX_ITEMS', 50),
     'bidi_artifact_max_events' => env('IDELIUM_BIDI_ARTIFACT_MAX_EVENTS', 100),
+    'launcher' => [
+        'ca_bundle' => env('IDELIUM_LAUNCHER_CA_BUNDLE'),
+        'connect_timeout' => env('IDELIUM_LAUNCHER_CONNECT_TIMEOUT', 5),
+        'timeout' => env('IDELIUM_LAUNCHER_TIMEOUT', 30),
+        'insecure' => env('IDELIUM_LAUNCHER_INSECURE', false),
+    ],
 ];
