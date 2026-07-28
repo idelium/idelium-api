@@ -18,6 +18,7 @@ use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ModelDeviceController;
 use App\Http\Controllers\OsController;
+use App\Http\Controllers\OidcWorkloadIdentityController;
 use App\Http\Controllers\ParallelRunScheduleController;
 use App\Http\Controllers\PerformedStepController;
 use App\Http\Controllers\PerformedTestController;
@@ -45,6 +46,8 @@ Route::get('sanctum/csrf-cookie', [CsrfCookieController::class, 'show'])
     ->name('csrf.show');
 Route::post('login', [LoginController::class, 'login'])
     ->name('login');
+Route::post('oidc/token-exchange', [OidcWorkloadIdentityController::class, 'exchange'])
+    ->name('oidc.token-exchange');
 
 Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::get('me/capabilities', [CapabilityController::class, 'me'])

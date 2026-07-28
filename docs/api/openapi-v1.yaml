@@ -12,9 +12,31 @@ security:
 tags:
   - name: ParallelRuns
   - name: Agents
+  - name: WorkloadIdentity
   - name: AssetVersions
   - name: AssetImpact
 paths:
+  /oidc/token-exchange:
+    post:
+      tags: [WorkloadIdentity]
+      operationId: exchangeOidcWorkloadToken
+      summary: Exchange a trusted CI OIDC assertion for a short-lived Idelium workload token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OidcTokenExchangeRequest"
+      responses:
+        "201":
+          description: Short-lived workload token revealed once.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OidcTokenExchangeResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
   /admin/projects/{idProject}/parallel-runs:
     get:
       tags: [ParallelRuns]
@@ -449,6 +471,38 @@ components:
     AgentStatus:
       type: string
       enum: [pending, approved, maintenance, draining, disabled]
+    OidcTokenExchangeRequest:
+      type: object
+      required: [provider, projectId, assertion]
+      properties:
+        provider:
+          type: string
+          examples: [github-actions, gitlab-ci, jenkins]
+        projectId:
+          type: integer
+          minimum: 1
+        assertion:
+          type: string
+          description: Signed OIDC JWT assertion. Never logged or persisted.
+    OidcTokenExchangeResponse:
+      type: object
+      required: [tokenType, token, expiresAt, scopes, projectId]
+      properties:
+        tokenType:
+          type: string
+          const: Bearer
+        token:
+          type: string
+          description: One-time-revealed short-lived workload token.
+        expiresAt:
+          type: string
+          format: date-time
+        scopes:
+          type: array
+          items:
+            type: string
+        projectId:
+          type: integer
     AgentHealth:
       type: string
       enum: [unknown, healthy, unhealthy]

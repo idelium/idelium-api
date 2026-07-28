@@ -9,6 +9,7 @@ Idelium Web and Idelium CLI:
 - parallel and matrix run scheduling;
 - run metadata filters;
 - agent registration and status management;
+- OIDC workload identity token exchange;
 - asset version history and review transitions;
 - asset impact analysis.
 
