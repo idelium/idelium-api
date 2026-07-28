@@ -76,6 +76,19 @@ deep links and dashboard refresh behavior.
 
 ## Export descriptors
 
+Durable result exports use these tenant-scoped endpoints:
+
+- `POST /api/admin/result-exports`
+- `GET /api/admin/result-exports/{resultExport}`
+- `GET /api/admin/result-exports/{resultExport}/download`
+
+The create request accepts:
+
+| Field | Description |
+| --- | --- |
+| `performedTestCycleId` | Performed run to export. It must belong to the authenticated tenant. |
+| `format` | `json` or `markdown`. |
+
 Large exports should be represented as asynchronous descriptors rather than raw
 download URLs:
 
@@ -89,6 +102,6 @@ download URLs:
 ```
 
 The Web client only enables downloads for completed, same-origin descriptors
-that have not expired. Future durable export job endpoints must keep the same
-descriptor fields and enforce the same tenant and capability checks as result
-exploration endpoints.
+that have not expired. Durable export endpoints keep the same descriptor fields
+and enforce the same tenant and capability checks as result exploration
+endpoints. Export descriptors expire after the API-defined retention window.

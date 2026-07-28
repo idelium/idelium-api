@@ -29,6 +29,7 @@ use App\Http\Controllers\PerformedTestCycleController;
 use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\PluginController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\ResultExportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServiceAccountController;
 use App\Http\Controllers\SideBarController;
@@ -316,6 +317,12 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     /* performed step */
     Route::get('admin/stepsperfomed/{idTestPerformed}', [PerformedStepController::class, 'index'])
         ->name('testsperfomed.index');
+    Route::post('admin/result-exports', [ResultExportController::class, 'store'])
+        ->name('result-exports.store');
+    Route::get('admin/result-exports/{resultExport}', [ResultExportController::class, 'show'])
+        ->name('result-exports.show');
+    Route::get('admin/result-exports/{resultExport}/download', [ResultExportController::class, 'download'])
+        ->name('result-exports.download');
     /* platforms */
     Route::get('admin/platforms/manageplatforms/{type}', [PlatformController::class, 'index'])
         ->name('platform.index');
