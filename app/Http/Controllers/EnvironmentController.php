@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEnvironmentRequest;
 use App\Http\Requests\UpdateEnvironmentRequest;
 use App\Models\Environment;
+use App\Services\EnvironmentSecretPolicy;
 use App\Services\TenantResourceService;
 use Illuminate\Http\Request;
 
 class EnvironmentController extends Controller
 {
-    public function __construct(private TenantResourceService $tenantResources) {}
+    public function __construct(
+        private TenantResourceService $tenantResources,
+        private EnvironmentSecretPolicy $environmentSecrets,
+    ) {}
 
     public function index(Request $request, $idProject)
     {
@@ -26,6 +30,7 @@ class EnvironmentController extends Controller
     {
         $projectId = $request->integer('idProject');
         $this->tenantResources->project($request->user(), $projectId);
+        $this->environmentSecrets->assertNoInlineSecrets($request->input('config'));
 
         $environment = new Environment;
         $environment->code = $request->input('code');
@@ -40,9 +45,16 @@ class EnvironmentController extends Controller
 
     public function show(Request $request, $idProject, $id)
     {
-        return $this->tenantResources
-            ->resource($request->user(), Environment::class, $idProject, $id)
-            ->only(['id', 'code', 'description', 'config', 'idProject']);
+        $environment = $this->tenantResources
+            ->resource($request->user(), Environment::class, $idProject, $id);
+
+        return [
+            'id' => $environment->id,
+            'code' => $environment->code,
+            'description' => $environment->description,
+            'config' => $this->environmentSecrets->redactConfig($environment->config),
+            'idProject' => $environment->idProject,
+        ];
     }
 
     public function update(UpdateEnvironmentRequest $request, $idProject, $id)
@@ -53,6 +65,7 @@ class EnvironmentController extends Controller
             $idProject,
             $id
         );
+        $this->environmentSecrets->assertNoInlineSecrets($request->input('config'));
         $environment->config = $request->input('config');
         $environment->save();
 
