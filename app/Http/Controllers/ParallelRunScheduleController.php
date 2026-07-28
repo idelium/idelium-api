@@ -7,6 +7,7 @@ use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\TestCycle;
 use App\Services\AuditEventService;
+use App\Services\AssetVersionService;
 use App\Services\RunTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class ParallelRunScheduleController extends Controller
     public function __construct(
         private readonly RunTokenService $runTokens,
         private readonly AuditEventService $auditEvents,
+        private readonly AssetVersionService $assetVersions,
     ) {}
 
     public function index(Request $request, int $idProject): JsonResponse
@@ -63,12 +65,15 @@ class ParallelRunScheduleController extends Controller
 
         $schedule = DB::transaction(function () use ($customer, $idProject, $validated) {
             $this->ownedProject($customer, $idProject, true);
-            $this->ownedTestCycle(
+            $testCycle = $this->ownedTestCycle(
                 $customer,
                 $idProject,
                 (int) $validated['testCycleId'],
                 true
             );
+            $metadata = $validated['metadata'] ?? [];
+            $metadata['executionSnapshot'] = $this->assetVersions
+                ->executionSnapshotForTestCycle($testCycle);
 
             return ParallelRunSchedule::firstOrCreate([
                 'idCostumer' => $customer->id,
@@ -80,7 +85,7 @@ class ParallelRunScheduleController extends Controller
                 'status' => ParallelRunSchedule::STATUS_QUEUED,
                 'workerStates' => [],
                 'resultSummary' => [],
-                'metadata' => $validated['metadata'] ?? [],
+                'metadata' => $metadata,
                 'scheduledAt' => now(),
             ]);
         });

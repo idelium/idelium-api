@@ -3,9 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Costumer;
+use App\Models\AssetVersion;
+use App\Models\Environment;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\Role;
+use App\Models\Step;
+use App\Models\Test;
 use App\Models\TestCycle;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -76,6 +80,60 @@ class ParallelRunScheduleApiTest extends TestCase
 
         $this->assertSame($first->json('id'), $second->json('id'));
         $this->assertDatabaseCount('parallel_run_schedules', 1);
+    }
+
+    public function test_parallel_run_persists_execution_asset_version_snapshot(): void
+    {
+        Sanctum::actingAs($this->createUser($this->firstCustomer));
+
+        $test = Test::forceCreate([
+            'name' => 'Versioned test',
+            'description' => 'Versioned test',
+            'config' => json_encode([]),
+            'idProject' => $this->firstProject->id,
+            'idCostumer' => $this->firstCustomer->id,
+        ]);
+        $step = Step::forceCreate([
+            'name' => 'Versioned step',
+            'description' => 'Versioned step',
+            'config' => json_encode([]),
+            'idProject' => $this->firstProject->id,
+            'idCostumer' => $this->firstCustomer->id,
+            'order' => 1,
+        ]);
+        $environment = Environment::forceCreate([
+            'code' => 'versioned',
+            'description' => 'Versioned environment',
+            'config' => json_encode([]),
+            'idProject' => $this->firstProject->id,
+            'idCostumer' => $this->firstCustomer->id,
+        ]);
+        $this->firstCycle->config = json_encode([
+            'tests' => [$test->id],
+            'steps' => [['id' => $step->id]],
+            'environments' => [['assetId' => $environment->id]],
+        ]);
+        $this->firstCycle->save();
+
+        $cycleVersion = $this->createAssetVersion('test_cycle', $this->firstCycle->id, 1);
+        $testVersion = $this->createAssetVersion('test', $test->id, 3);
+        $stepVersion = $this->createAssetVersion('step', $step->id, 2);
+        $environmentVersion = $this->createAssetVersion('environment', $environment->id, 4);
+
+        $this->postJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs', [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'versioned-snapshot',
+        ])->assertCreated()
+            ->assertJsonPath('metadata.executionSnapshot.testCycle.versionId', $cycleVersion->id)
+            ->assertJsonPath('metadata.executionSnapshot.tests.0.versionId', $testVersion->id)
+            ->assertJsonPath('metadata.executionSnapshot.steps.0.versionId', $stepVersion->id)
+            ->assertJsonPath('metadata.executionSnapshot.environments.0.versionId', $environmentVersion->id);
+
+        $schedule = ParallelRunSchedule::where('idempotencyKey', 'versioned-snapshot')->firstOrFail();
+        $this->assertSame(
+            $cycleVersion->id,
+            $schedule->metadata['executionSnapshot']['testCycle']['versionId']
+        );
     }
 
     public function test_sanctum_user_cannot_schedule_for_another_customer_project_or_cycle(): void
@@ -301,6 +359,23 @@ class ParallelRunScheduleApiTest extends TestCase
             'resultSummary' => [],
             'metadata' => [],
             'scheduledAt' => now(),
+        ]);
+    }
+
+    private function createAssetVersion(string $type, int $assetId, int $version): AssetVersion
+    {
+        return AssetVersion::forceCreate([
+            'idCostumer' => $this->firstCustomer->id,
+            'idProject' => $this->firstProject->id,
+            'assetType' => $type,
+            'assetId' => $assetId,
+            'version' => $version,
+            'actorUserId' => null,
+            'reason' => 'asset.updated',
+            'snapshot' => [
+                'id' => $assetId,
+                'assetType' => $type,
+            ],
         ]);
     }
 }
