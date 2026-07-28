@@ -17,7 +17,22 @@ reference the exact definitions that were approved and used.
   versions for tests, steps, and environments referenced by the test-cycle
   configuration.
 
+## Read-only API
+
+Authenticated Web clients can inspect asset history without mutating any asset:
+
+- `GET /api/admin/projects/{idProject}/asset-versions/{assetType}/{assetId}`
+  lists immutable versions for one asset, newest first.
+- `GET /api/admin/projects/{idProject}/asset-versions/{assetVersion}`
+  returns one version with its snapshot.
+- `GET /api/admin/projects/{idProject}/asset-versions/{fromVersion}/diff/{toVersion}`
+  compares two versions of the same asset and returns added, removed, and changed
+  snapshot fields.
+
+All endpoints require the `resources.read` capability and are scoped by both
+tenant and project. Cross-tenant or cross-project versions return `404`.
+
 ## Remaining Roadmap Work
 
-Approval state, diff, rollback, import/export version contracts, richer CLI
-snapshot delivery, and Web history views remain open roadmap work.
+Approval state, rollback, import/export version contracts, richer CLI snapshot
+delivery, and Web history views remain open roadmap work.

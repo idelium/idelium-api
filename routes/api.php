@@ -4,6 +4,7 @@ use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\ArtifactDescriptorController;
+use App\Http\Controllers\AssetVersionController;
 use App\Http\Controllers\CapabilityController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
@@ -98,6 +99,19 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('service-accounts.revoke');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
+    /* asset versions */
+    Route::get(
+        'admin/projects/{idProject}/asset-versions/{assetType}/{assetId}',
+        [AssetVersionController::class, 'index']
+    )->whereNumber('assetId')->name('assetversions.index');
+    Route::get(
+        'admin/projects/{idProject}/asset-versions/{fromVersion}/diff/{toVersion}',
+        [AssetVersionController::class, 'diff']
+    )->whereNumber(['fromVersion', 'toVersion'])->name('assetversions.diff');
+    Route::get(
+        'admin/projects/{idProject}/asset-versions/{assetVersion}',
+        [AssetVersionController::class, 'show']
+    )->whereNumber('assetVersion')->name('assetversions.show');
     /* parallel runs */
     Route::get('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
         ->name('parallelruns.index');

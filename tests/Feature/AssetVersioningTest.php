@@ -94,4 +94,139 @@ class AssetVersioningTest extends TestCase
         $this->expectException(LogicException::class);
         $version->update(['reason' => 'changed']);
     }
+
+    public function test_asset_version_history_endpoint_lists_project_scoped_versions(): void
+    {
+        $step = $this->step([
+            'name' => 'Open browser',
+            'description' => 'Open browser',
+        ]);
+        $firstVersion = $this->version($step, 1, [
+            'name' => 'Open browser',
+            'description' => 'Open browser',
+        ]);
+        $secondVersion = $this->version($step, 2, [
+            'name' => 'Open browser updated',
+            'description' => 'Open browser',
+        ]);
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/step/'.$step->id
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $secondVersion->id)
+            ->assertJsonPath('data.0.version', 2)
+            ->assertJsonPath('data.1.id', $firstVersion->id)
+            ->assertJsonMissingPath('data.0.snapshot');
+    }
+
+    public function test_asset_version_detail_and_diff_are_tenant_scoped(): void
+    {
+        $step = $this->step(['name' => 'Create account']);
+        $firstVersion = $this->version($step, 1, [
+            'name' => 'Create account',
+            'description' => 'Initial flow',
+        ]);
+        $secondVersion = $this->version($step, 2, [
+            'name' => 'Create account',
+            'description' => 'Validated account flow',
+            'config' => json_encode(['type' => 'selenium']),
+        ]);
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$firstVersion->id
+        )->assertOk()
+            ->assertJsonPath('data.snapshot.name', 'Create account');
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'
+            .$firstVersion->id.'/diff/'.$secondVersion->id
+        )->assertOk()
+            ->assertJsonPath('data.from.versionId', $firstVersion->id)
+            ->assertJsonPath('data.to.versionId', $secondVersion->id)
+            ->assertJsonPath('data.changes.added.config', json_encode(['type' => 'selenium']))
+            ->assertJsonPath('data.changes.changed.description.from', 'Initial flow')
+            ->assertJsonPath('data.changes.changed.description.to', 'Validated account flow');
+    }
+
+    public function test_asset_version_detail_rejects_cross_tenant_versions(): void
+    {
+        $otherCustomer = Costumer::forceCreate([
+            'costumer' => 'Other customer',
+            'description' => 'Other customer',
+            'logo' => json_encode([]),
+            'licenseExpiration' => now()->addYear(),
+            'apiKey' => 'other-api-key',
+        ]);
+        $otherProject = Project::forceCreate([
+            'name' => 'Other project',
+            'description' => 'Other project',
+            'idCostumer' => $otherCustomer->id,
+        ]);
+        $foreignVersion = AssetVersion::forceCreate([
+            'idCostumer' => $otherCustomer->id,
+            'idProject' => $otherProject->id,
+            'assetType' => 'step',
+            'assetId' => 999,
+            'version' => 1,
+            'actorUserId' => null,
+            'reason' => 'asset.created',
+            'snapshot' => ['name' => 'Foreign step'],
+        ]);
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$foreignVersion->id
+        )->assertNotFound();
+    }
+
+    public function test_asset_version_detail_rejects_cross_project_versions(): void
+    {
+        $otherProject = Project::forceCreate([
+            'name' => 'Other project',
+            'description' => 'Other project',
+            'idCostumer' => $this->customer->id,
+        ]);
+        $otherProjectVersion = AssetVersion::forceCreate([
+            'idCostumer' => $this->customer->id,
+            'idProject' => $otherProject->id,
+            'assetType' => 'step',
+            'assetId' => 777,
+            'version' => 1,
+            'actorUserId' => null,
+            'reason' => 'asset.created',
+            'snapshot' => ['name' => 'Other project step'],
+        ]);
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$otherProjectVersion->id
+        )->assertNotFound();
+    }
+
+    private function step(array $attributes = []): Step
+    {
+        return Step::forceCreate(array_merge([
+            'name' => 'Step',
+            'description' => 'Step',
+            'config' => json_encode([]),
+            'idProject' => $this->project->id,
+            'idCostumer' => $this->customer->id,
+            'order' => 1,
+        ], $attributes));
+    }
+
+    /**
+     * @param array<string, mixed> $snapshot
+     */
+    private function version(Step $step, int $version, array $snapshot): AssetVersion
+    {
+        return AssetVersion::forceCreate([
+            'idCostumer' => $this->customer->id,
+            'idProject' => $this->project->id,
+            'assetType' => 'step',
+            'assetId' => $step->id,
+            'version' => $version,
+            'actorUserId' => null,
+            'reason' => $version === 1 ? 'asset.created' : 'asset.updated',
+            'snapshot' => $snapshot,
+        ]);
+    }
 }

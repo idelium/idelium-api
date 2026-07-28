@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class AssetVersionService
 {
+    public const ALLOWED_ASSET_TYPES = [
+        'environment',
+        'step',
+        'test',
+        'test_cycle',
+    ];
+
     public function record(Request $request, Model $asset, string $assetType, string $reason): AssetVersion
     {
         return DB::transaction(function () use ($request, $asset, $assetType, $reason) {
@@ -53,6 +60,81 @@ class AssetVersionService
             'steps' => $this->referencesFromConfig($config, 'steps', 'step', (int) $testCycle->idCostumer),
             'environments' => $this->referencesFromConfig($config, 'environments', 'environment', (int) $testCycle->idCostumer),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function diff(AssetVersion $from, AssetVersion $to): array
+    {
+        $fromSnapshot = $from->snapshot ?? [];
+        $toSnapshot = $to->snapshot ?? [];
+        $keys = collect(array_keys($fromSnapshot))
+            ->merge(array_keys($toSnapshot))
+            ->unique()
+            ->sort()
+            ->values();
+
+        $added = [];
+        $removed = [];
+        $changed = [];
+
+        foreach ($keys as $key) {
+            $fromHasKey = array_key_exists($key, $fromSnapshot);
+            $toHasKey = array_key_exists($key, $toSnapshot);
+
+            if (! $fromHasKey && $toHasKey) {
+                $added[$key] = $toSnapshot[$key];
+
+                continue;
+            }
+
+            if ($fromHasKey && ! $toHasKey) {
+                $removed[$key] = $fromSnapshot[$key];
+
+                continue;
+            }
+
+            if ($fromSnapshot[$key] !== $toSnapshot[$key]) {
+                $changed[$key] = [
+                    'from' => $fromSnapshot[$key],
+                    'to' => $toSnapshot[$key],
+                ];
+            }
+        }
+
+        return [
+            'from' => $this->versionReference($from),
+            'to' => $this->versionReference($to),
+            'changes' => [
+                'added' => $added,
+                'removed' => $removed,
+                'changed' => $changed,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function response(AssetVersion $version, bool $includeSnapshot = true): array
+    {
+        $payload = [
+            'id' => $version->id,
+            'idProject' => $version->idProject,
+            'assetType' => $version->assetType,
+            'assetId' => $version->assetId,
+            'version' => $version->version,
+            'actorUserId' => $version->actorUserId,
+            'reason' => $version->reason,
+            'createdAt' => optional($version->created_at)->toISOString(),
+        ];
+
+        if ($includeSnapshot) {
+            $payload['snapshot'] = $version->snapshot ?? [];
+        }
+
+        return $payload;
     }
 
     /**
