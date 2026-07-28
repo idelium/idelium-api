@@ -3,6 +3,7 @@
 use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\AuditEventController;
+use App\Http\Controllers\ArtifactDescriptorController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\HeaderController;
@@ -101,6 +102,15 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('parallelruns.cancel');
     Route::get('admin/projects/{idProject}/parallel-runs/{parallelRun}/results', [ParallelRunScheduleController::class, 'results'])
         ->name('parallelruns.results');
+    /* artifacts */
+    Route::get(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts',
+        [ArtifactDescriptorController::class, 'index']
+    )->name('artifacts.index');
+    Route::get(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}',
+        [ArtifactDescriptorController::class, 'show']
+    )->name('artifacts.show');
     /* testlauncher */
     Route::post('admin/launchtest', [TestLauncherController::class, 'launchTest'])
         ->name('testlauncher.launchTest');
