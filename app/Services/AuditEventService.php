@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Http\Middleware\CorrelateRequests;
+use App\Http\Middleware\AuthenticateIdeliumKey;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\AuditEvent;
 use App\Support\Tenancy\TenantContext;
@@ -30,7 +31,8 @@ class AuditEventService
         bool $failSafe = true,
     ): ?AuditEvent {
         try {
-            $context = $request->attributes->get(ResolveTenantContext::ATTRIBUTE);
+            $context = $request->attributes->get(ResolveTenantContext::ATTRIBUTE)
+                ?? $request->attributes->get(AuthenticateIdeliumKey::TENANT_CONTEXT_ATTRIBUTE);
             if (! $context instanceof TenantContext) {
                 throw new \LogicException('Tenant context is required for audit events.');
             }

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Costumer;
+use App\Models\AuditEvent;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\Role;
@@ -76,6 +77,23 @@ class RunTokenTest extends TestCase
         $this->assertStringNotContainsString($plainSecret, $runToken->tokenHash);
     }
 
+    public function test_run_token_issuance_is_audited_without_token_value(): void
+    {
+        $response = $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/tokens',
+                ['agentId' => 'agent-1']
+            )
+            ->assertCreated();
+
+        $event = AuditEvent::where('action', 'run_token.issue')->firstOrFail();
+
+        $this->assertSame('[REDACTED]', $event->afterValues['token']);
+        $this->assertSame('agent-1', $event->afterValues['agentId']);
+        $this->assertStringNotContainsString($response->json('token'), json_encode($event->toArray()));
+    }
+
     public function test_runner_claim_consumes_short_lived_token_once(): void
     {
         $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
@@ -92,6 +110,10 @@ class RunTokenTest extends TestCase
             )
             ->assertOk()
             ->assertJsonPath('activeWorkers', 1);
+        $this->assertSame(
+            '[REDACTED]',
+            AuditEvent::where('action', 'run_token.consume')->firstOrFail()->afterValues['token']
+        );
 
         $this->withHeader('Idelium-Key', $this->customer->apiKey)
             ->withHeader('Idelium-Run-Token', $issued['token'])
@@ -104,6 +126,10 @@ class RunTokenTest extends TestCase
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors('runToken');
+        $this->assertSame(
+            '[REDACTED]',
+            AuditEvent::where('action', 'run_token.reject')->firstOrFail()->afterValues['token']
+        );
     }
 
     public function test_wrong_agent_token_is_rejected(): void

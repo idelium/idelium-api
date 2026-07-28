@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ServiceAccount;
+use App\Services\AuditEventService;
 use App\Services\CapabilityService;
 use App\Services\ServiceAccountService;
 use Illuminate\Http\Request;
@@ -12,6 +13,7 @@ class ServiceAccountController extends Controller
     public function __construct(
         private readonly CapabilityService $capabilities,
         private readonly ServiceAccountService $serviceAccounts,
+        private readonly AuditEventService $auditEvents,
     ) {}
 
     public function index(Request $request)
@@ -47,6 +49,20 @@ class ServiceAccountController extends Controller
             $validated['scopes'] ?? [],
             isset($validated['expiresAt']) ? new \DateTimeImmutable($validated['expiresAt']) : null,
         );
+        $this->auditEvents->record(
+            $request,
+            'service_account.create',
+            'service_account',
+            (string) $created['serviceAccount']->id,
+            afterValues: [
+                'name' => $created['serviceAccount']->name,
+                'credentialId' => $created['serviceAccount']->credentialId,
+                'secret' => $created['secret'],
+                'scopes' => $created['serviceAccount']->scopes ?? [],
+                'expiresAt' => optional($created['serviceAccount']->expiresAt)->toISOString(),
+            ],
+            projectId: $created['serviceAccount']->idProject,
+        );
 
         return response()->json([
             'data' => $created['serviceAccount'],
@@ -61,8 +77,23 @@ class ServiceAccountController extends Controller
 
         abort_unless((int) $serviceAccount->idCostumer === $context->activeTenantId, 404);
 
+        $revoked = $this->serviceAccounts->revoke($serviceAccount);
+        $this->auditEvents->record(
+            $request,
+            'service_account.revoke',
+            'service_account',
+            (string) $serviceAccount->id,
+            beforeValues: [
+                'revokedAt' => optional($serviceAccount->getOriginal('revokedAt'))->toISOString(),
+            ],
+            afterValues: [
+                'revokedAt' => optional($revoked->revokedAt)->toISOString(),
+            ],
+            projectId: $revoked->idProject,
+        );
+
         return response()->json([
-            'data' => $this->serviceAccounts->revoke($serviceAccount),
+            'data' => $revoked,
         ]);
     }
 }

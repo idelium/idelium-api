@@ -6,6 +6,7 @@ use App\Models\Costumer;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\TestCycle;
+use App\Services\AuditEventService;
 use App\Services\RunTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,10 @@ class ParallelRunScheduleController extends Controller
         ParallelRunSchedule::STATUS_FAILED,
     ];
 
-    public function __construct(private readonly RunTokenService $runTokens) {}
+    public function __construct(
+        private readonly RunTokenService $runTokens,
+        private readonly AuditEventService $auditEvents,
+    ) {}
 
     public function index(Request $request, int $idProject): JsonResponse
     {
@@ -177,6 +181,19 @@ class ParallelRunScheduleController extends Controller
         ]);
         $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun);
         $issued = $this->runTokens->issue($schedule, $validated['agentId']);
+        $this->auditEvents->record(
+            $request,
+            'run_token.issue',
+            'parallel_run_schedule',
+            (string) $schedule->id,
+            afterValues: [
+                'agentId' => $issued['runToken']->agentId,
+                'tokenId' => $issued['runToken']->tokenId,
+                'token' => $issued['token'],
+                'expiresAt' => $issued['runToken']->expiresAt->toISOString(),
+            ],
+            projectId: $schedule->idProject,
+        );
 
         return response()->json([
             'token' => $issued['token'],
@@ -328,7 +345,43 @@ class ParallelRunScheduleController extends Controller
             return;
         }
 
-        $this->runTokens->consume($token, $tenantId, $projectId, $parallelRun, $workerId);
+        try {
+            $runToken = $this->runTokens->consume(
+                $token,
+                $tenantId,
+                $projectId,
+                $parallelRun,
+                $workerId
+            );
+            $this->auditEvents->record(
+                $request,
+                'run_token.consume',
+                'parallel_run_schedule',
+                (string) $parallelRun,
+                afterValues: [
+                    'agentId' => $workerId,
+                    'tokenId' => $runToken->tokenId,
+                    'token' => $token,
+                ],
+                projectId: $projectId,
+            );
+        } catch (\Throwable $exception) {
+            $this->auditEvents->record(
+                $request,
+                'run_token.reject',
+                'parallel_run_schedule',
+                (string) $parallelRun,
+                result: \App\Models\AuditEvent::RESULT_FAILURE,
+                afterValues: [
+                    'agentId' => $workerId,
+                    'token' => $token,
+                    'reason' => $exception->getMessage(),
+                ],
+                projectId: $projectId,
+            );
+
+            throw $exception;
+        }
     }
 
     private function ownedProject(
