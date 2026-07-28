@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\AuditEvent;
 use App\Models\Costumer;
 use App\Models\IdentityProvider;
 use App\Models\Role;

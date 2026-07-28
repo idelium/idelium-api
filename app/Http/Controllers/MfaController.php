@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditEvent;
 use App\Services\AuditEventService;
 use App\Services\CapabilityService;
 use App\Services\MfaService;
@@ -78,7 +79,7 @@ class MfaController extends Controller
                 'mfa.step_up',
                 'user',
                 (string) $request->user()->id,
-                result: \App\Models\AuditEvent::RESULT_FAILURE,
+                result: AuditEvent::RESULT_FAILURE,
                 afterValues: ['code' => $validated['code']],
             );
 

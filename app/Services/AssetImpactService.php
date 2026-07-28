@@ -82,7 +82,7 @@ class AssetImpactService
     }
 
     /**
-     * @param array<int, int> $dependentTestIds
+     * @param  array<int, int>  $dependentTestIds
      * @return Collection<int, TestCycle>
      */
     private function dependentTestCycles(
@@ -140,7 +140,7 @@ class AssetImpactService
     }
 
     /**
-     * @param array<int, string> $keys
+     * @param  array<int, string>  $keys
      */
     private function configReferences(mixed $config, array $keys, int $assetId): bool
     {
@@ -148,8 +148,8 @@ class AssetImpactService
     }
 
     /**
-     * @param array<int, string> $keys
-     * @param array<int, int> $assetIds
+     * @param  array<int, string>  $keys
+     * @param  array<int, int>  $assetIds
      */
     private function configReferencesAny(mixed $config, array $keys, array $assetIds): bool
     {
@@ -159,8 +159,8 @@ class AssetImpactService
     }
 
     /**
-     * @param array<int, string> $keys
-     * @param array<int, int> $assetIds
+     * @param  array<int, string>  $keys
+     * @param  array<int, int>  $assetIds
      */
     private function nodeReferencesAny(mixed $node, array $keys, array $assetIds, ?string $parentKey = null): bool
     {
@@ -193,8 +193,8 @@ class AssetImpactService
     }
 
     /**
-     * @param array<mixed> $value
-     * @param array<int, int> $assetIds
+     * @param  array<mixed>  $value
+     * @param  array<int, int>  $assetIds
      */
     private function arrayContainsReference(array $value, array $assetIds): bool
     {

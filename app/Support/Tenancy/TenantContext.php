@@ -20,8 +20,7 @@ class TenantContext
         ?int $activeTenantId = null,
         ?string $impersonationReason = null,
         ?string $impersonationExpiresAt = null,
-    ): self
-    {
+    ): self {
         $actorTenantId = (int) $user->idCostumer;
 
         return new self(

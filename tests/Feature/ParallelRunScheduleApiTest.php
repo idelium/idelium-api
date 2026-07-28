@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Costumer;
 use App\Models\AssetVersion;
+use App\Models\Costumer;
 use App\Models\Environment;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;

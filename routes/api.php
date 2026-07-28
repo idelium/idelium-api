@@ -1,27 +1,27 @@
 <?php
 
-use App\Http\Controllers\BrandDeviceController;
-use App\Http\Controllers\BrowserController;
-use App\Http\Controllers\AuditEventController;
-use App\Http\Controllers\ArtifactDescriptorController;
 use App\Http\Controllers\AgentRegistrationController;
+use App\Http\Controllers\ArtifactDescriptorController;
 use App\Http\Controllers\AssetImpactController;
 use App\Http\Controllers\AssetVersionController;
+use App\Http\Controllers\AuditEventController;
+use App\Http\Controllers\BrandDeviceController;
+use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\CapabilityController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
-use App\Http\Controllers\ImportSeleniumController;
 use App\Http\Controllers\IdentityLifecycleController;
+use App\Http\Controllers\ImportSeleniumController;
 use App\Http\Controllers\IntegrationEndpointController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
-use App\Http\Controllers\ModelDeviceController;
 use App\Http\Controllers\MfaController;
-use App\Http\Controllers\OsController;
+use App\Http\Controllers\ModelDeviceController;
 use App\Http\Controllers\OidcWorkloadIdentityController;
+use App\Http\Controllers\OsController;
 use App\Http\Controllers\ParallelRunScheduleController;
 use App\Http\Controllers\PerformedStepController;
 use App\Http\Controllers\PerformedTestController;

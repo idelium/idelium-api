@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 class IdentityLifecycleService
 {
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      * @return array{user: User, scimIdentity: ScimIdentity, created: bool}
      */
     public function upsertScimUser(IdentityProvider $provider, array $attributes): array
@@ -50,7 +50,7 @@ class IdentityLifecycleService
 
             $created = ! $user instanceof User;
             if (! $user instanceof User) {
-                $user = new User();
+                $user = new User;
                 $user->password = Hash::make(Str::random(64));
                 $user->email_verified_at = now();
                 $user->idCostumer = $provider->idCostumer;
@@ -126,7 +126,7 @@ class IdentityLifecycleService
     }
 
     /**
-     * @param array<int, string> $groups
+     * @param  array<int, string>  $groups
      */
     private function roleForGroups(IdentityProvider $provider, array $groups): int
     {

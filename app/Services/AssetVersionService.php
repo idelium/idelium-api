@@ -271,7 +271,7 @@ class AssetVersionService
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      * @return array<int, array<string, mixed>>
      */
     private function referencesFromConfig(

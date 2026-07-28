@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Costumer;
 use App\Models\AgentRegistration;
 use App\Models\AuditEvent;
+use App\Models\Costumer;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\RunToken;
 use App\Models\TestCycle;
-use App\Services\AuditEventService;
 use App\Services\AssetVersionService;
+use App\Services\AuditEventService;
 use App\Services\RunMetadataService;
 use App\Services\RunTokenService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -448,7 +449,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
      * @return array<string, mixed>
      */
     private function claimWorkerForCustomer(
@@ -631,7 +632,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
      */
     private function heartbeatWorkerForSchedule(
         Request $request,
@@ -682,7 +683,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
      */
     private function updateWorkerForSchedule(
         ParallelRunSchedule $schedule,
@@ -879,7 +880,7 @@ class ParallelRunScheduleController extends Controller
                 'run_token.reject',
                 'parallel_run_schedule',
                 (string) $parallelRun,
-                result: \App\Models\AuditEvent::RESULT_FAILURE,
+                result: AuditEvent::RESULT_FAILURE,
                 afterValues: [
                     'agentId' => $workerId,
                     'token' => $token,
@@ -1031,7 +1032,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $afterValues
+     * @param  array<string, mixed>  $afterValues
      */
     private function auditRunTokenEvent(
         Request $request,
@@ -1221,7 +1222,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, mixed> $matrix
+     * @param  array<string, mixed>  $matrix
      * @return array<int, array<string, string>>
      */
     private function matrixCombinations(array $matrix): array
@@ -1264,7 +1265,7 @@ class ParallelRunScheduleController extends Controller
     }
 
     /**
-     * @param array<string, string> $combination
+     * @param  array<string, string>  $combination
      */
     private function matrixIdempotencyKey(string $baseKey, array $combination): string
     {
@@ -1289,7 +1290,7 @@ class ParallelRunScheduleController extends Controller
                 continue;
             }
 
-            if ($now->greaterThan(\Carbon\Carbon::parse($leaseExpiresAt))) {
+            if ($now->greaterThan(Carbon::parse($leaseExpiresAt))) {
                 $workers[$workerId]['status'] = ParallelRunSchedule::WORKER_LOST;
                 $workers[$workerId]['lostAt'] = $now->toISOString();
                 $workers[$workerId]['updatedAt'] = $now->toISOString();

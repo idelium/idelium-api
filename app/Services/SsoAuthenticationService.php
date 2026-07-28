@@ -85,7 +85,7 @@ class SsoAuthenticationService
     }
 
     /**
-     * @param array<int, string> $types
+     * @param  array<int, string>  $types
      */
     private function assertProviderActive(IdentityProvider $provider, array $types): void
     {
@@ -162,7 +162,7 @@ class SsoAuthenticationService
     }
 
     /**
-     * @param array<string, mixed> $header
+     * @param  array<string, mixed>  $header
      */
     private function validateJwtSignature(IdentityProvider $provider, array $header, string $signedPart, string $signature): void
     {
@@ -190,7 +190,7 @@ class SsoAuthenticationService
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function validateCommonClaims(
         IdentityProvider $provider,
@@ -258,7 +258,7 @@ class SsoAuthenticationService
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function loginLinkedUser(IdentityProvider $provider, array $claims, Request $request): User
     {

@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\ResolveTenantContext;
 use App\Models\AuditEvent;
 use App\Models\Costumer;
 use App\Models\IdentityProvider;
 use App\Services\AuditEventService;
 use App\Services\SsoAuthenticationService;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -121,8 +123,8 @@ class SsoAuthenticationController extends Controller
     {
         $customer = Costumer::findOrFail($provider->idCostumer);
         $request->attributes->set(
-            \App\Http\Middleware\ResolveTenantContext::ATTRIBUTE,
-            \App\Support\Tenancy\TenantContext::forCustomerKey($customer)
+            ResolveTenantContext::ATTRIBUTE,
+            TenantContext::forCustomerKey($customer)
         );
 
         return $request;

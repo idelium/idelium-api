@@ -14,7 +14,7 @@ class RunMetadataService
     ];
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $metadata
      * @return array<string, mixed>
      */
     public function normalize(array $metadata): array
@@ -46,8 +46,8 @@ class RunMetadataService
     }
 
     /**
-     * @param array<string, mixed> $metadata
-     * @param array<string, string|null> $filters
+     * @param  array<string, mixed>  $metadata
+     * @param  array<string, string|null>  $filters
      */
     public function matchesFilters(array $metadata, array $filters): bool
     {
@@ -75,7 +75,7 @@ class RunMetadataService
     }
 
     /**
-     * @param array<string, mixed> $identity
+     * @param  array<string, mixed>  $identity
      * @return array<string, string|null>
      */
     private function normalizeWorkloadIdentity(array $identity): array
@@ -94,7 +94,7 @@ class RunMetadataService
     }
 
     /**
-     * @param array<string, mixed> $values
+     * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
     private function redact(array $values): array

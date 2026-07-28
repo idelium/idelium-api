@@ -67,6 +67,7 @@ class MfaService
     public function totpForTest(User $user, ?int $timestamp = null): string
     {
         $user = $this->persistableUser($user);
+
         return $this->totp(Crypt::decryptString((string) $user->mfaSecretEncrypted), $timestamp ?? time());
     }
 

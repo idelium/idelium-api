@@ -164,7 +164,7 @@ class OidcWorkloadIdentityTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function assertion(array $overrides = [], string $secret = self::SECRET): string
     {

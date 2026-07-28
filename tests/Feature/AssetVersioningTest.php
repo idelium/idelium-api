@@ -292,15 +292,14 @@ class AssetVersioningTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $snapshot
+     * @param  array<string, mixed>  $snapshot
      */
     private function version(
         Step $step,
         int $version,
         array $snapshot,
         ?int $actorUserId = null
-    ): AssetVersion
-    {
+    ): AssetVersion {
         return AssetVersion::forceCreate([
             'idCostumer' => $this->customer->id,
             'idProject' => $this->project->id,

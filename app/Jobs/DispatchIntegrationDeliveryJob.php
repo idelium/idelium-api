@@ -108,7 +108,7 @@ class DispatchIntegrationDeliveryJob implements ShouldQueue
     }
 
     /**
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $metadata
      */
     private function audit(IntegrationDelivery $delivery, string $result, array $metadata): void
     {

@@ -9,7 +9,7 @@ use Illuminate\Validation\ValidationException;
 class ArtifactDescriptorService
 {
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      */
     public function register(array $attributes): ArtifactDescriptor
     {
@@ -40,7 +40,7 @@ class ArtifactDescriptorService
     }
 
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      */
     private function validate(array $attributes): void
     {

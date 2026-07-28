@@ -11,7 +11,7 @@ class ServiceAccountService
     public const TOKEN_PREFIX = 'idsa';
 
     /**
-     * @param array<int, string> $scopes
+     * @param  array<int, string>  $scopes
      * @return array{serviceAccount: ServiceAccount, secret: string}
      */
     public function create(

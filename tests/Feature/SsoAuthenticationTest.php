@@ -220,7 +220,7 @@ class SsoAuthenticationTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function idToken(array $overrides = [], string $secret = self::SECRET): string
     {
@@ -242,7 +242,7 @@ class SsoAuthenticationTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $overrides
+     * @param  array<string, mixed>  $overrides
      */
     private function samlResponse(array $overrides = []): string
     {

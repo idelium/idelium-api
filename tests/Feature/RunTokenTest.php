@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Costumer;
 use App\Models\AgentRegistration;
 use App\Models\AuditEvent;
+use App\Models\Costumer;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\Role;

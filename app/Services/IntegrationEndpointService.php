@@ -14,7 +14,7 @@ use Illuminate\Validation\ValidationException;
 class IntegrationEndpointService
 {
     /**
-     * @param array<string, mixed> $attributes
+     * @param  array<string, mixed>  $attributes
      */
     public function create(int $tenantId, int $projectId, array $attributes): IntegrationEndpoint
     {
@@ -39,7 +39,7 @@ class IntegrationEndpointService
     }
 
     /**
-     * @param array<string, mixed> $payload
+     * @param  array<string, mixed>  $payload
      */
     public function createDelivery(
         IntegrationEndpoint $endpoint,
@@ -86,7 +86,7 @@ class IntegrationEndpointService
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     public function adapterPayload(IntegrationEndpoint $endpoint, IntegrationDelivery $delivery, array $data): array

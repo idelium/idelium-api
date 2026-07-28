@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\DispatchIntegrationDeliveryJob;
-use App\Models\AuditEvent;
 use App\Models\IntegrationDelivery;
 use App\Models\IntegrationEndpoint;
 use App\Services\AuditEventService;

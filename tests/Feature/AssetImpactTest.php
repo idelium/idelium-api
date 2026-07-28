@@ -132,9 +132,9 @@ class AssetImpactTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      */
-    private function testAsset(string $name, array $config): Test
+    private function test_asset(string $name, array $config): Test
     {
         return Test::forceCreate([
             'name' => $name,
@@ -146,9 +146,9 @@ class AssetImpactTest extends TestCase
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param  array<string, mixed>  $config
      */
-    private function testCycle(string $name, array $config): TestCycle
+    private function test_cycle(string $name, array $config): TestCycle
     {
         return TestCycle::forceCreate([
             'name' => $name,

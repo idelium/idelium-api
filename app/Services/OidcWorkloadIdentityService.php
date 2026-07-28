@@ -105,8 +105,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $provider
-     * @param array<string, mixed> $header
+     * @param  array<string, mixed>  $provider
+     * @param  array<string, mixed>  $header
      */
     private function validateSignature(array $provider, array $header, string $signedPart, string $signature): void
     {
@@ -133,7 +133,7 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $provider
+     * @param  array<string, mixed>  $provider
      */
     private function verifyHmac(array $provider, string $signedPart, string $signature): bool
     {
@@ -146,8 +146,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $provider
-     * @param array<string, mixed> $header
+     * @param  array<string, mixed>  $provider
+     * @param  array<string, mixed>  $header
      */
     private function verifyRsa(array $provider, array $header, string $signedPart, string $signature): bool
     {
@@ -160,8 +160,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $provider
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $provider
+     * @param  array<string, mixed>  $claims
      */
     private function validateClaims(array $provider, array $claims): void
     {
@@ -207,8 +207,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $provider
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $provider
+     * @param  array<string, mixed>  $claims
      */
     private function projectForPolicy(array $provider, array $claims, int $projectId): Project
     {
@@ -226,8 +226,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $claims
-     * @param array<string, mixed>|null $provider
+     * @param  array<string, mixed>  $claims
+     * @param  array<string, mixed>|null  $provider
      * @return array<string, mixed>|null
      */
     private function policyForClaims(
@@ -260,8 +260,8 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $claims
-     * @param array<string, mixed> $policy
+     * @param  array<string, mixed>  $claims
+     * @param  array<string, mixed>  $policy
      */
     private function claimMatches(array $claims, array $policy, string $key): bool
     {
@@ -294,7 +294,7 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      * @return array<string, mixed>
      */
     private function safeClaims(array $claims): array
@@ -311,7 +311,7 @@ class OidcWorkloadIdentityService
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param  array<string, mixed>  $claims
      */
     private function claimString(array $claims, string $key): ?string
     {

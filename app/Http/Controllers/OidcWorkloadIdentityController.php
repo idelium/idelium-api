@@ -84,8 +84,8 @@ class OidcWorkloadIdentityController extends Controller
     }
 
     /**
-     * @param array<string, mixed>|null $afterValues
-     * @param array<string, mixed>|null $metadata
+     * @param  array<string, mixed>|null  $afterValues
+     * @param  array<string, mixed>|null  $metadata
      */
     private function audit(
         Request $request,

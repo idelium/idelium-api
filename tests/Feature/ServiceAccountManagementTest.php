@@ -2,10 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Costumer;
 use App\Models\AuditEvent;
+use App\Models\Costumer;
 use App\Models\Role;
-use App\Models\ServiceAccount;
 use App\Models\User;
 use App\Services\ServiceAccountService;
 use Illuminate\Foundation\Testing\RefreshDatabase;

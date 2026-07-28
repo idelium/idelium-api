@@ -2,20 +2,21 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\PurgeArtifactDescriptorJob;
 use App\Models\ArtifactDescriptor;
 use App\Models\AuditEvent;
 use App\Models\Costumer;
-use App\Jobs\PurgeArtifactDescriptorJob;
 use App\Models\PerformedTestCycle;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\TestCycle;
 use App\Models\User;
-use App\Services\ArtifactLifecycleService;
 use App\Services\ArtifactDescriptorService;
+use App\Services\ArtifactLifecycleService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class ArtifactDescriptorTest extends TestCase
@@ -57,7 +58,7 @@ class ArtifactDescriptorTest extends TestCase
             'artifacts.allowed_content_types' => ['application/json'],
         ]);
 
-        $this->expectException(\Illuminate\Validation\ValidationException::class);
+        $this->expectException(ValidationException::class);
 
         app(ArtifactDescriptorService::class)->register([
             'idCostumer' => $this->firstCustomer->id,

@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\AuthenticateIdeliumKey;
+use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\AuditEvent;
 use App\Support\Tenancy\TenantContext;
@@ -14,9 +14,9 @@ use Throwable;
 class AuditEventService
 {
     /**
-     * @param array<string, mixed>|null $beforeValues
-     * @param array<string, mixed>|null $afterValues
-     * @param array<string, mixed>|null $metadata
+     * @param  array<string, mixed>|null  $beforeValues
+     * @param  array<string, mixed>|null  $afterValues
+     * @param  array<string, mixed>|null  $metadata
      */
     public function record(
         Request $request,
@@ -69,7 +69,7 @@ class AuditEventService
     }
 
     /**
-     * @param array<string, mixed>|null $values
+     * @param  array<string, mixed>|null  $values
      * @return array<string, mixed>|null
      */
     public function redact(?array $values): ?array

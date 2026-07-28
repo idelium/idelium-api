@@ -51,7 +51,7 @@ class EnvironmentSecretPolicy
     }
 
     /**
-     * @param array<string, mixed> $values
+     * @param  array<string, mixed>  $values
      * @return array<string, mixed>
      */
     private function redactArray(array $values): array
@@ -60,6 +60,7 @@ class EnvironmentSecretPolicy
         foreach ($values as $key => $value) {
             if ($this->isSecretReference($value) || $this->isSensitiveKey((string) $key)) {
                 $redacted[$key] = self::REDACTED;
+
                 continue;
             }
 
@@ -70,7 +71,7 @@ class EnvironmentSecretPolicy
     }
 
     /**
-     * @param array<string, mixed> $values
+     * @param  array<string, mixed>  $values
      * @return array<int, string>
      */
     private function inlineSecretPaths(array $values, string $prefix = ''): array
@@ -85,6 +86,7 @@ class EnvironmentSecretPolicy
 
             if ($this->isSensitiveKey((string) $key) && $this->hasPlainSecretValue($value)) {
                 $paths[] = $path;
+
                 continue;
             }
 
