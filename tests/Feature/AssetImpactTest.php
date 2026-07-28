@@ -51,16 +51,16 @@ class AssetImpactTest extends TestCase
     public function test_step_impact_includes_dependent_tests_and_test_cycles(): void
     {
         $step = $this->step('Login step');
-        $test = $this->testAsset('Login test', [
+        $test = $this->test_asset('Login test', [
             'steps' => [['id' => $step->id]],
         ]);
-        $directCycle = $this->testCycle('Direct cycle', [
+        $directCycle = $this->test_cycle('Direct cycle', [
             'steps' => [$step->id],
         ]);
-        $indirectCycle = $this->testCycle('Indirect cycle', [
+        $indirectCycle = $this->test_cycle('Indirect cycle', [
             'tests' => [['assetId' => $test->id]],
         ]);
-        $this->testCycle('Unrelated cycle', [
+        $this->test_cycle('Unrelated cycle', [
             'tests' => [999],
         ]);
 
