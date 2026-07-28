@@ -4,6 +4,7 @@ use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\ArtifactDescriptorController;
+use App\Http\Controllers\AgentRegistrationController;
 use App\Http\Controllers\AssetImpactController;
 use App\Http\Controllers\AssetVersionController;
 use App\Http\Controllers\CapabilityController;
@@ -98,6 +99,11 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('service-accounts.store');
     Route::post('admin/service-accounts/{serviceAccount}/revoke', [ServiceAccountController::class, 'revoke'])
         ->name('service-accounts.revoke');
+    /* agents */
+    Route::get('admin/agents', [AgentRegistrationController::class, 'index'])
+        ->name('agents.index');
+    Route::put('admin/agents/{agentRegistration}/status', [AgentRegistrationController::class, 'updateStatus'])
+        ->name('agents.updateStatus');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
     /* asset impact */
@@ -292,6 +298,8 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
 
 /* command line api */
 Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
+    Route::post('agents/register', [AgentRegistrationController::class, 'register'])
+        ->name('cl.agents.register');
     Route::get('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
         ->name('cl.parallelruns.index');
     Route::post('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])

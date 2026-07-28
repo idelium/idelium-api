@@ -9,6 +9,8 @@ return [
             'accounts.manage',
             'customers.manage',
             'api_keys.manage',
+            'agents.manage',
+            'agents.read',
             'audit_events.read',
             'artifacts.read',
             'projects.manage',
@@ -20,6 +22,8 @@ return [
         2 => [
             'accounts.manage',
             'api_keys.manage',
+            'agents.manage',
+            'agents.read',
             'audit_events.read',
             'artifacts.read',
             'projects.manage',
@@ -30,6 +34,7 @@ return [
         ],
         3 => [
             'artifacts.read',
+            'agents.read',
             'projects.read',
             'resources.read',
             'runs.launch',

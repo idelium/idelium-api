@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Costumer;
+use App\Models\AgentRegistration;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\TestCycle;
@@ -155,6 +156,7 @@ class ParallelRunScheduleController extends Controller
             $workers = $schedule->workerStates ?? [];
             $workerId = $validated['workerId'];
             $existing = $workers[$workerId] ?? null;
+            $this->assertAgentCanClaim($customer->id, $workerId);
 
             if ($existing === null && $schedule->activeWorkers >= $schedule->requestedConcurrency) {
                 abort(response()->json([
@@ -489,6 +491,29 @@ class ParallelRunScheduleController extends Controller
             );
 
             throw $exception;
+        }
+    }
+
+    private function assertAgentCanClaim(int $tenantId, string $workerId): void
+    {
+        $agent = AgentRegistration::query()
+            ->where('idCostumer', $tenantId)
+            ->where('agentId', $workerId)
+            ->first();
+
+        if ($agent === null) {
+            return;
+        }
+
+        if (
+            $agent->status !== AgentRegistration::STATUS_APPROVED
+            || $agent->health === AgentRegistration::HEALTH_UNHEALTHY
+        ) {
+            abort(response()->json([
+                'message' => 'Agent is not approved and healthy for new run ownership.',
+                'agentStatus' => $agent->status,
+                'agentHealth' => $agent->health,
+            ], 409));
         }
     }
 
