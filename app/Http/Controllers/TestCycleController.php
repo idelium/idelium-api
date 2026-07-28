@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateTestCycleRequest;
 use App\Models\TestCycle;
 use App\Services\AssetVersionService;
 use App\Services\TenantResourceService;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 
 class TestCycleController extends Controller
@@ -20,9 +21,19 @@ class TestCycleController extends Controller
     {
         $this->tenantResources->project($request->user(), $idProject);
 
-        return TestCycle::select('id', 'name', 'description')
+        $query = TestCycle::select('id', 'name', 'description', 'created_at', 'updated_at')
             ->where('idCostumer', $request->user()->idCostumer)
-            ->where('idProject', $idProject)->get();
+            ->where('idProject', $idProject);
+
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            ['id', 'name', 'description', 'created_at', 'updated_at'],
+            'id',
+            'asc',
+            ['name', 'description'],
+            ['id', 'name']
+        );
     }
 
     public function store(StoreTestCycleRequest $request)

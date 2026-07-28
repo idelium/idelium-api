@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\Role;
 use App\Models\Step;
 use App\Models\Test;
+use App\Models\TestCycle;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -133,6 +134,61 @@ class EnterpriseGridApiTest extends TestCase
             ->assertJsonPath('meta.total', 0);
     }
 
+    public function test_test_cycles_grid_preserves_legacy_array_response_without_grid_parameters(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        $this->createTestCycle($customer, $project, 'Nightly cycle');
+        $this->createTestCycle($customer, $project, 'Smoke cycle');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/testcycles/'.$project->id)
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonPath('0.name', 'Nightly cycle')
+            ->assertJsonMissingPath('meta');
+    }
+
+    public function test_test_cycles_grid_supports_server_side_search_filter_sort_and_pagination(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        $nightly = $this->createTestCycle($customer, $project, 'Nightly cycle', 'Browser nightly');
+        $this->createTestCycle($customer, $project, 'Smoke cycle', 'Browser smoke');
+        $this->createTestCycle($customer, $project, 'Postman cycle', 'API regression');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/testcycles/'.$project->id.'?page=1&pageSize=1&search=browser&sort=name&direction=asc&filter[id]='.$nightly->id
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $nightly->id)
+            ->assertJsonPath('data.0.name', 'Nightly cycle')
+            ->assertJsonPath('meta.page', 1)
+            ->assertJsonPath('meta.pageSize', 1)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.sort', 'name')
+            ->assertJsonPath('meta.direction', 'asc');
+    }
+
+    public function test_test_cycles_grid_remains_tenant_scoped_when_requested_as_grid(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $firstUser, $firstProject] = $this->createTenant('first');
+        [$secondCustomer, , $secondProject] = $this->createTenant('second');
+        $this->createTestCycle($secondCustomer, $secondProject, 'Protected cycle');
+
+        Sanctum::actingAs($firstUser);
+
+        $this->getJson('/api/admin/testcycles/'.$secondProject->id.'?page=1&pageSize=10')
+            ->assertNotFound();
+        $this->getJson('/api/admin/testcycles/'.$firstProject->id.'?page=1&pageSize=10')
+            ->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('meta.total', 0);
+    }
+
     private function createTenant(string $prefix): array
     {
         $customer = Costumer::forceCreate([
@@ -182,6 +238,21 @@ class EnterpriseGridApiTest extends TestCase
         string $description = 'Test'
     ): Test {
         return Test::forceCreate([
+            'name' => $name,
+            'description' => $description,
+            'config' => json_encode([]),
+            'idProject' => $project->id,
+            'idCostumer' => $customer->id,
+        ]);
+    }
+
+    private function createTestCycle(
+        Costumer $customer,
+        Project $project,
+        string $name,
+        string $description = 'Test cycle'
+    ): TestCycle {
+        return TestCycle::forceCreate([
             'name' => $name,
             'description' => $description,
             'config' => json_encode([]),

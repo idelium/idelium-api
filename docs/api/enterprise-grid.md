@@ -90,4 +90,26 @@ Allowed filters:
 - `id`
 - `name`
 
+### Test cycles
+
+`GET /api/admin/testcycles/{idProject}` supports the enterprise grid contract.
+
+Allowed search columns:
+
+- `name`
+- `description`
+
+Allowed sort columns:
+
+- `id`
+- `name`
+- `description`
+- `created_at`
+- `updated_at`
+
+Allowed filters:
+
+- `id`
+- `name`
+
 All queries are scoped to the authenticated tenant and validated project.
