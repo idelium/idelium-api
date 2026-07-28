@@ -119,6 +119,102 @@ class PostmanIntegrationTest extends TestCase
             ->assertJsonPath('0.testCycleDoneId', $secondRun->id);
     }
 
+    public function test_performed_test_cycles_support_tenant_scoped_pagination(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user] = $this->createTenant('first');
+        [, $secondUser] = $this->createTenant('second');
+        $hierarchy = $this->createResultParents($customer);
+
+        $firstRun = $hierarchy['performedCycle'];
+        $firstRun->forceFill([
+            'date' => now()->subMinutes(2),
+            'status' => 0,
+        ])->save();
+
+        $secondRun = PerformedTestCycle::forceCreate([
+            'testCycleId' => $hierarchy['testCycle']->id,
+            'date' => now()->subMinute(),
+            'status' => 1,
+            'idCostumer' => $customer->id,
+        ]);
+        $thirdRun = PerformedTestCycle::forceCreate([
+            'testCycleId' => $hierarchy['testCycle']->id,
+            'date' => now(),
+            'status' => 1,
+            'idCostumer' => $customer->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/testcyclesperfomed/'.$hierarchy['testCycle']->id.'?page=1&perPage=1&status=1&sort=date&direction=desc'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $thirdRun->id)
+            ->assertJsonPath('meta.pagination.page', 1)
+            ->assertJsonPath('meta.pagination.perPage', 1)
+            ->assertJsonPath('meta.pagination.total', 2)
+            ->assertJsonPath('meta.pagination.sort', 'date')
+            ->assertJsonPath('meta.pagination.direction', 'desc');
+
+        $this->getJson(
+            '/api/admin/testcyclesperfomed/'.$hierarchy['testCycle']->id.'?page=2&perPage=1&status=1&sort=date&direction=desc'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $secondRun->id)
+            ->assertJsonPath('meta.pagination.page', 2);
+
+        Sanctum::actingAs($secondUser);
+        $this->getJson(
+            '/api/admin/testcyclesperfomed/'.$hierarchy['testCycle']->id.'?page=1&perPage=10'
+        )->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('meta.pagination.total', 0);
+    }
+
+    public function test_performed_tests_support_filtered_server_side_pagination(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user] = $this->createTenant('first');
+        $hierarchy = $this->createResultParents($customer);
+
+        $hierarchy['performedTest']->forceFill([
+            'status' => 0,
+            'name' => 'Browser smoke',
+        ])->save();
+
+        $apiTest = PerformedTest::forceCreate([
+            'testCycleDoneId' => $hierarchy['performedCycle']->id,
+            'testId' => $hierarchy['test']->id,
+            'status' => 1,
+            'name' => 'API regression',
+            'idCostumer' => $customer->id,
+        ]);
+        $mobileTest = PerformedTest::forceCreate([
+            'testCycleDoneId' => $hierarchy['performedCycle']->id,
+            'testId' => $hierarchy['test']->id,
+            'status' => 1,
+            'name' => 'Mobile regression',
+            'idCostumer' => $customer->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/testsperfomed/'.$hierarchy['performedCycle']->id.'?page=1&perPage=1&status=1&sort=name&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $apiTest->id)
+            ->assertJsonPath('data.0.name', 'API regression')
+            ->assertJsonPath('meta.pagination.total', 2)
+            ->assertJsonPath('meta.pagination.sort', 'name')
+            ->assertJsonPath('meta.pagination.direction', 'asc');
+
+        $this->getJson(
+            '/api/admin/testsperfomed/'.$hierarchy['performedCycle']->id.'?page=2&perPage=1&status=1&sort=name&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $mobileTest->id)
+            ->assertJsonPath('meta.pagination.page', 2);
+    }
+
     public function test_cli_rejects_invalid_postman_result_payloads(): void
     {
         [$customer] = $this->createTenant('first');
