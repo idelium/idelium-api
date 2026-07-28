@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTestCycleRequest;
 use App\Http\Requests\UpdateTestCycleRequest;
 use App\Models\TestCycle;
+use App\Services\AssetVersionService;
 use App\Services\TenantResourceService;
 use Illuminate\Http\Request;
 
 class TestCycleController extends Controller
 {
-    public function __construct(private TenantResourceService $tenantResources) {}
+    public function __construct(
+        private TenantResourceService $tenantResources,
+        private AssetVersionService $assetVersions,
+    ) {}
 
     public function index(Request $request, $idProject)
     {
@@ -35,6 +39,7 @@ class TestCycleController extends Controller
         $testcycle->idProject = $request->integer('idProject');
         $testcycle->idCostumer = $request->user()->idCostumer;
         $testcycle->save();
+        $this->assetVersions->record($request, $testcycle, 'test_cycle', 'asset.created');
 
         return $this->index($request, $request->integer('idProject'));
     }
@@ -57,6 +62,7 @@ class TestCycleController extends Controller
         $testcycle->config = $request->input('config');
         $testcycle->description = $request->input('description');
         $testcycle->save();
+        $this->assetVersions->record($request, $testcycle, 'test_cycle', 'asset.updated');
 
         return $this->index($request, $idProject);
     }

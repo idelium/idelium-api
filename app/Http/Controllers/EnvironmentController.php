@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreEnvironmentRequest;
 use App\Http\Requests\UpdateEnvironmentRequest;
 use App\Models\Environment;
+use App\Services\AssetVersionService;
 use App\Services\EnvironmentSecretPolicy;
 use App\Services\TenantResourceService;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class EnvironmentController extends Controller
     public function __construct(
         private TenantResourceService $tenantResources,
         private EnvironmentSecretPolicy $environmentSecrets,
+        private AssetVersionService $assetVersions,
     ) {}
 
     public function index(Request $request, $idProject)
@@ -39,6 +41,7 @@ class EnvironmentController extends Controller
         $environment->idProject = $projectId;
         $environment->idCostumer = $request->user()->idCostumer;
         $environment->save();
+        $this->assetVersions->record($request, $environment, 'environment', 'asset.created');
 
         return $this->index($request, $projectId);
     }
@@ -68,6 +71,7 @@ class EnvironmentController extends Controller
         $this->environmentSecrets->assertNoInlineSecrets($request->input('config'));
         $environment->config = $request->input('config');
         $environment->save();
+        $this->assetVersions->record($request, $environment, 'environment', 'asset.updated');
 
         return $this->index($request, $idProject);
     }
