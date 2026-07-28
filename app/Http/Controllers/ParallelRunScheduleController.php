@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Costumer;
 use App\Models\AgentRegistration;
+use App\Models\AuditEvent;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
 use App\Models\RunToken;
@@ -16,6 +17,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class ParallelRunScheduleController extends Controller
@@ -236,60 +239,44 @@ class ParallelRunScheduleController extends Controller
             $validated['workerId']
         );
 
-        $schedule = DB::transaction(function () use (
+        $claim = $this->claimWorkerForCustomer(
             $request,
             $customer,
             $idProject,
             $parallelRun,
-            $validated
-        ) {
-            $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun, true);
+            $validated,
+            false
+        );
 
-            if (in_array($schedule->status, self::TERMINAL_STATUSES, true)) {
-                abort(response()->json([
-                    'message' => 'Parallel run is already terminal.',
-                ], 422));
-            }
+        return response()->json($claim);
+    }
 
-            if ($schedule->status === ParallelRunSchedule::STATUS_CANCELLING) {
-                abort(response()->json([
-                    'message' => 'Parallel run is cancelling.',
-                ], 409));
-            }
+    public function claimWorkerWithRunToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'idProject' => ['required', 'integer'],
+            'parallelRun' => ['required', 'integer'],
+            'workerId' => ['required', 'string', 'max:128'],
+            'capabilities' => ['sometimes', 'array'],
+        ]);
+        $runToken = $this->consumeRunTokenForProjectRun(
+            $request,
+            (int) $validated['idProject'],
+            (int) $validated['parallelRun'],
+            $validated['workerId']
+        );
+        $customer = Costumer::findOrFail($runToken->idCostumer);
 
-            $workers = $schedule->workerStates ?? [];
-            $workerId = $validated['workerId'];
-            $existing = $workers[$workerId] ?? null;
-            $this->assertAgentCanClaim($customer->id, $workerId, $request);
+        $claim = $this->claimWorkerForCustomer(
+            $request,
+            $customer,
+            (int) $validated['idProject'],
+            (int) $validated['parallelRun'],
+            $validated,
+            true
+        );
 
-            if ($existing === null && $schedule->activeWorkers >= $schedule->requestedConcurrency) {
-                abort(response()->json([
-                    'message' => 'Concurrency limit reached.',
-                ], 409));
-            }
-
-            $now = now();
-            $workers[$workerId] = [
-                'workerId' => $workerId,
-                'status' => ParallelRunSchedule::WORKER_RUNNING,
-                'capabilities' => $validated['capabilities'] ?? ($existing['capabilities'] ?? []),
-                'claimedAt' => $existing['claimedAt'] ?? $now->toISOString(),
-                'lastHeartbeatAt' => $now->toISOString(),
-                'leaseExpiresAt' => $now->copy()->addSeconds(self::DEFAULT_WORKER_LEASE_SECONDS)->toISOString(),
-                'updatedAt' => $now->toISOString(),
-                'result' => $existing['result'] ?? null,
-            ];
-
-            $schedule->workerStates = $workers;
-            $schedule->status = ParallelRunSchedule::STATUS_RUNNING;
-            $schedule->startedAt ??= $now;
-            $this->recalculateWorkers($schedule);
-            $schedule->save();
-
-            return $schedule;
-        });
-
-        return response()->json($this->scheduleResponse($schedule));
+        return response()->json($claim);
     }
 
     public function heartbeatWorker(
@@ -366,6 +353,28 @@ class ParallelRunScheduleController extends Controller
         return response()->json($payload, $heartbeat['status'] ?? 200);
     }
 
+    public function heartbeatWorkerWithToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'idProject' => ['required', 'integer'],
+            'parallelRun' => ['required', 'integer'],
+            'workerId' => ['required', 'string', 'max:128'],
+            'leaseSeconds' => ['sometimes', 'integer', 'min:15', 'max:3600'],
+        ]);
+
+        return $this->heartbeatWorkerForSchedule(
+            $request,
+            $this->workerTokenSchedule(
+                (int) $validated['idProject'],
+                (int) $validated['parallelRun'],
+                $validated['workerId'],
+                true
+            ),
+            $validated['workerId'],
+            $validated
+        );
+    }
+
     public function issueRunToken(
         Request $request,
         int $idProject,
@@ -438,6 +447,120 @@ class ParallelRunScheduleController extends Controller
         ]);
     }
 
+    /**
+     * @param array<string, mixed> $validated
+     * @return array<string, mixed>
+     */
+    private function claimWorkerForCustomer(
+        Request $request,
+        Costumer $customer,
+        int $idProject,
+        int $parallelRun,
+        array $validated,
+        bool $issueWorkerToken
+    ): array {
+        $workerToken = $issueWorkerToken ? Str::random(64) : null;
+        $schedule = DB::transaction(function () use (
+            $request,
+            $customer,
+            $idProject,
+            $parallelRun,
+            $validated,
+            $workerToken
+        ) {
+            $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun, true);
+
+            if (in_array($schedule->status, self::TERMINAL_STATUSES, true)) {
+                abort(response()->json([
+                    'message' => 'Parallel run is already terminal.',
+                ], 422));
+            }
+
+            if ($schedule->status === ParallelRunSchedule::STATUS_CANCELLING) {
+                abort(response()->json([
+                    'message' => 'Parallel run is cancelling.',
+                ], 409));
+            }
+
+            $workers = $schedule->workerStates ?? [];
+            $workerId = $validated['workerId'];
+            $existing = $workers[$workerId] ?? null;
+            $this->assertAgentCanClaim($customer->id, $workerId, $request);
+
+            if ($existing === null && $schedule->activeWorkers >= $schedule->requestedConcurrency) {
+                abort(response()->json([
+                    'message' => 'Concurrency limit reached.',
+                ], 409));
+            }
+
+            $now = now();
+            $leaseExpiresAt = $now->copy()->addSeconds(self::DEFAULT_WORKER_LEASE_SECONDS);
+            $workers[$workerId] = [
+                'workerId' => $workerId,
+                'status' => ParallelRunSchedule::WORKER_RUNNING,
+                'capabilities' => $validated['capabilities'] ?? ($existing['capabilities'] ?? []),
+                'claimedAt' => $existing['claimedAt'] ?? $now->toISOString(),
+                'lastHeartbeatAt' => $now->toISOString(),
+                'leaseExpiresAt' => $leaseExpiresAt->toISOString(),
+                'updatedAt' => $now->toISOString(),
+                'result' => $existing['result'] ?? null,
+            ];
+
+            if ($workerToken !== null) {
+                $workers[$workerId]['workerTokenHash'] = Hash::make($workerToken);
+                $workers[$workerId]['workerTokenExpiresAt'] = $leaseExpiresAt->toISOString();
+            } elseif (isset($existing['workerTokenHash'])) {
+                $workers[$workerId]['workerTokenHash'] = $existing['workerTokenHash'];
+                $workers[$workerId]['workerTokenExpiresAt'] = $existing['workerTokenExpiresAt'] ?? null;
+            }
+
+            $schedule->workerStates = $workers;
+            $schedule->status = ParallelRunSchedule::STATUS_RUNNING;
+            $schedule->startedAt ??= $now;
+            $this->recalculateWorkers($schedule);
+            $schedule->save();
+
+            return $schedule;
+        });
+
+        $response = $this->scheduleResponse($schedule);
+        if ($workerToken !== null) {
+            $response['workerToken'] = $workerToken;
+            $response['workerTokenExpiresAt'] = $this->workerState($schedule, $validated['workerId'])['workerTokenExpiresAt'] ?? null;
+        }
+
+        return $response;
+    }
+
+    private function consumeRunTokenForProjectRun(
+        Request $request,
+        int $idProject,
+        int $parallelRun,
+        string $workerId
+    ): RunToken {
+        $token = $request->header('Idelium-Run-Token');
+        if (! is_string($token) || $token === '') {
+            abort(response()->json([
+                'message' => 'A short-lived run token is required to claim a worker slot.',
+            ], 401));
+        }
+
+        try {
+            $runToken = $this->runTokens->consumeForProjectRun($token, $idProject, $parallelRun, $workerId);
+            $this->auditRunTokenEvent($request, $runToken, 'run_token.consume', AuditEvent::RESULT_SUCCESS, [
+                'agentId' => $workerId,
+                'tokenId' => '[REDACTED]',
+                'token' => '[REDACTED]',
+            ]);
+
+            return $runToken;
+        } catch (\Throwable $exception) {
+            $this->auditRunTokenRejection($request, $idProject, $parallelRun, $workerId, $exception->getMessage());
+
+            throw $exception;
+        }
+    }
+
     public function updateWorker(
         Request $request,
         int $idProject,
@@ -505,6 +628,131 @@ class ParallelRunScheduleController extends Controller
         });
 
         return response()->json($this->scheduleResponse($schedule));
+    }
+
+    /**
+     * @param array<string, mixed> $validated
+     */
+    private function heartbeatWorkerForSchedule(
+        Request $request,
+        ParallelRunSchedule $schedule,
+        string $workerId,
+        array $validated
+    ): JsonResponse {
+        $this->markExpiredWorkerLeases($schedule);
+
+        if (in_array($schedule->status, self::TERMINAL_STATUSES, true)) {
+            abort(response()->json([
+                'message' => 'Parallel run is already terminal.',
+            ], 422));
+        }
+
+        $workers = $schedule->workerStates ?? [];
+
+        if (! array_key_exists($workerId, $workers)) {
+            abort(response()->json([
+                'message' => 'Worker has not claimed this run.',
+            ], 404));
+        }
+
+        if (($workers[$workerId]['status'] ?? null) !== ParallelRunSchedule::WORKER_RUNNING) {
+            $schedule->workerStates = $workers;
+            $this->recalculateWorkers($schedule);
+            $schedule->save();
+            $payload = $this->scheduleResponse($schedule);
+            $payload['message'] = 'Worker lease is no longer active.';
+            $payload['workerStatus'] = $workers[$workerId]['status'] ?? null;
+
+            return response()->json($payload, 409);
+        }
+
+        $now = now();
+        $leaseExpiresAt = $now
+            ->copy()
+            ->addSeconds((int) ($validated['leaseSeconds'] ?? self::DEFAULT_WORKER_LEASE_SECONDS));
+        $workers[$workerId]['lastHeartbeatAt'] = $now->toISOString();
+        $workers[$workerId]['leaseExpiresAt'] = $leaseExpiresAt->toISOString();
+        $workers[$workerId]['workerTokenExpiresAt'] = $leaseExpiresAt->toISOString();
+        $workers[$workerId]['updatedAt'] = $now->toISOString();
+        $schedule->workerStates = $workers;
+        $this->recalculateWorkers($schedule);
+        $schedule->save();
+
+        return response()->json($this->scheduleResponse($schedule));
+    }
+
+    /**
+     * @param array<string, mixed> $validated
+     */
+    private function updateWorkerForSchedule(
+        ParallelRunSchedule $schedule,
+        string $workerId,
+        array $validated
+    ): JsonResponse {
+        if (in_array($schedule->status, self::TERMINAL_STATUSES, true)) {
+            abort(response()->json([
+                'message' => 'Parallel run is already terminal.',
+            ], 422));
+        }
+
+        if (
+            $schedule->status === ParallelRunSchedule::STATUS_CANCELLING
+            && $validated['status'] === ParallelRunSchedule::WORKER_RUNNING
+        ) {
+            abort(response()->json([
+                'message' => 'Parallel run is cancelling.',
+            ], 409));
+        }
+
+        $workers = $schedule->workerStates ?? [];
+
+        if (! array_key_exists($workerId, $workers)) {
+            abort(response()->json([
+                'message' => 'Worker has not claimed this run.',
+            ], 404));
+        }
+
+        $workers[$workerId]['status'] = $validated['status'];
+        $workers[$workerId]['updatedAt'] = now()->toISOString();
+        $workers[$workerId]['result'] = $validated['result'] ?? $workers[$workerId]['result'] ?? null;
+        $schedule->workerStates = $workers;
+
+        $this->recalculateWorkers($schedule);
+        $schedule->save();
+
+        return response()->json($this->scheduleResponse($schedule));
+    }
+
+    public function updateWorkerWithToken(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'idProject' => ['required', 'integer'],
+            'parallelRun' => ['required', 'integer'],
+            'workerId' => ['required', 'string', 'max:128'],
+            'status' => [
+                'required',
+                'string',
+                Rule::in([
+                    ParallelRunSchedule::WORKER_RUNNING,
+                    ParallelRunSchedule::WORKER_COMPLETED,
+                    ParallelRunSchedule::WORKER_FAILED,
+                    ParallelRunSchedule::WORKER_CANCELLED,
+                    ParallelRunSchedule::WORKER_LOST,
+                ]),
+            ],
+            'result' => ['sometimes', 'array'],
+        ]);
+
+        return $this->updateWorkerForSchedule(
+            $this->workerTokenSchedule(
+                (int) $validated['idProject'],
+                (int) $validated['parallelRun'],
+                $validated['workerId'],
+                true
+            ),
+            $validated['workerId'],
+            $validated
+        );
     }
 
     public function cancel(Request $request, int $idProject, int $parallelRun): JsonResponse
@@ -735,6 +983,117 @@ class ParallelRunScheduleController extends Controller
         return $query->firstOrFail();
     }
 
+    private function workerTokenSchedule(
+        int $idProject,
+        int $parallelRun,
+        string $workerId,
+        bool $lock = false
+    ): ParallelRunSchedule {
+        $query = ParallelRunSchedule::whereKey($parallelRun)
+            ->where('idProject', $idProject);
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        $schedule = $query->firstOrFail();
+        $worker = $this->workerState($schedule, $workerId);
+        $token = request()->header('Idelium-Worker-Token');
+
+        if (! is_string($token)
+            || $token === ''
+            || ! isset($worker['workerTokenHash'])
+            || ! Hash::check($token, $worker['workerTokenHash'])
+            || ! isset($worker['workerTokenExpiresAt'])
+            || now()->gte($worker['workerTokenExpiresAt'])) {
+            abort(response()->json([
+                'message' => 'Worker token is invalid, expired, or not bound to this worker.',
+            ], 401));
+        }
+
+        return $schedule;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function workerState(ParallelRunSchedule $schedule, string $workerId): array
+    {
+        $workers = $schedule->workerStates ?? [];
+        $worker = $workers[$workerId] ?? null;
+        if (! is_array($worker)) {
+            abort(response()->json([
+                'message' => 'Worker has not claimed this run.',
+            ], 404));
+        }
+
+        return $worker;
+    }
+
+    /**
+     * @param array<string, mixed> $afterValues
+     */
+    private function auditRunTokenEvent(
+        Request $request,
+        RunToken $runToken,
+        string $action,
+        string $result,
+        array $afterValues
+    ): void {
+        AuditEvent::create([
+            'actorUserId' => null,
+            'actorTenantId' => $runToken->idCostumer,
+            'activeTenantId' => $runToken->idCostumer,
+            'idProject' => $runToken->idProject,
+            'action' => $action,
+            'targetType' => 'parallel_run_schedule',
+            'targetId' => (string) $runToken->parallelRunScheduleId,
+            'beforeValues' => null,
+            'afterValues' => $afterValues,
+            'result' => $result,
+            'sourceIp' => $request->ip(),
+            'correlationId' => (string) Str::uuid(),
+            'metadata' => null,
+        ]);
+    }
+
+    private function auditRunTokenRejection(
+        Request $request,
+        int $idProject,
+        int $parallelRun,
+        string $workerId,
+        string $reason
+    ): void {
+        $schedule = ParallelRunSchedule::query()
+            ->whereKey($parallelRun)
+            ->where('idProject', $idProject)
+            ->first();
+
+        if (! $schedule instanceof ParallelRunSchedule) {
+            return;
+        }
+
+        AuditEvent::create([
+            'actorUserId' => null,
+            'actorTenantId' => $schedule->idCostumer,
+            'activeTenantId' => $schedule->idCostumer,
+            'idProject' => $schedule->idProject,
+            'action' => 'run_token.reject',
+            'targetType' => 'parallel_run_schedule',
+            'targetId' => (string) $schedule->id,
+            'beforeValues' => null,
+            'afterValues' => [
+                'agentId' => $workerId,
+                'token' => '[REDACTED]',
+                'reason' => $reason,
+            ],
+            'result' => AuditEvent::RESULT_FAILURE,
+            'sourceIp' => $request->ip(),
+            'correlationId' => (string) Str::uuid(),
+            'metadata' => null,
+        ]);
+    }
+
     private function recalculateWorkers(ParallelRunSchedule $schedule): void
     {
         $workers = $schedule->workerStates ?? [];
@@ -851,7 +1210,14 @@ class ParallelRunScheduleController extends Controller
         $workers = $schedule->workerStates ?? [];
         ksort($workers);
 
-        return array_values($workers);
+        return collect($workers)
+            ->map(function (array $worker): array {
+                unset($worker['workerTokenHash'], $worker['workerTokenExpiresAt']);
+
+                return $worker;
+            })
+            ->values()
+            ->all();
     }
 
     /**

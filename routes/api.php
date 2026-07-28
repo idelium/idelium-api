@@ -49,6 +49,15 @@ Route::post('login', [LoginController::class, 'login'])
 Route::post('oidc/token-exchange', [OidcWorkloadIdentityController::class, 'exchange'])
     ->name('oidc.token-exchange');
 
+Route::prefix('ideliumrunner')->group(function () {
+    Route::post('claim', [ParallelRunScheduleController::class, 'claimWorkerWithRunToken'])
+        ->name('runner.claim');
+    Route::post('heartbeat', [ParallelRunScheduleController::class, 'heartbeatWorkerWithToken'])
+        ->name('runner.heartbeat');
+    Route::put('worker', [ParallelRunScheduleController::class, 'updateWorkerWithToken'])
+        ->name('runner.updateWorker');
+});
+
 Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::get('me/capabilities', [CapabilityController::class, 'me'])
         ->name('capabilities.me');

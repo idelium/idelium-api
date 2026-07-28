@@ -74,6 +74,40 @@ class RunTokenService
         });
     }
 
+    public function consumeForProjectRun(
+        string $token,
+        int $projectId,
+        int $parallelRunScheduleId,
+        string $agentId
+    ): RunToken {
+        return DB::transaction(function () use (
+            $token,
+            $projectId,
+            $parallelRunScheduleId,
+            $agentId
+        ) {
+            [$tokenId, $secret] = $this->split($token);
+
+            $runToken = RunToken::where('tokenId', $tokenId)->lockForUpdate()->first();
+            if ($runToken === null
+                || (int) $runToken->idProject !== $projectId
+                || (int) $runToken->parallelRunScheduleId !== $parallelRunScheduleId
+                || $runToken->agentId !== $agentId
+                || $runToken->isUsed()
+                || $runToken->isRevoked()
+                || $runToken->isExpired()
+                || ! Hash::check($secret, $runToken->tokenHash)) {
+                throw ValidationException::withMessages([
+                    'runToken' => ['The run token is invalid, expired, used, or not bound to this agent.'],
+                ]);
+            }
+
+            $runToken->forceFill(['usedAt' => now()])->save();
+
+            return $runToken;
+        });
+    }
+
     public function revoke(RunToken $runToken): RunToken
     {
         if ($runToken->revokedAt === null) {

@@ -21,6 +21,7 @@ class OpenApiContractTest extends TestCase
             '/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/tokens',
             $contract['paths']
         );
+        $this->assertArrayHasKey('/ideliumrunner/claim', $contract['paths']);
 
         $operationIds = [];
         foreach ($contract['paths'] as $path) {

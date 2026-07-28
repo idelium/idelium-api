@@ -308,6 +308,51 @@ paths:
                   revokedAt:
                     type: string
                     format: date-time
+  /ideliumrunner/claim:
+    post:
+      tags: [ParallelRuns]
+      operationId: claimRunnerWithRunToken
+      summary: Claim a worker slot using only a one-time run token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerClaimRequest"
+      responses:
+        "200":
+          description: Run state and one-time worker token for subsequent runner calls.
+  /ideliumrunner/heartbeat:
+    post:
+      tags: [ParallelRuns]
+      operationId: heartbeatRunnerWithWorkerToken
+      summary: Renew a worker lease using only a worker token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerHeartbeatRequest"
+      responses:
+        "200":
+          description: Updated run state.
+  /ideliumrunner/worker:
+    put:
+      tags: [ParallelRuns]
+      operationId: updateRunnerWithWorkerToken
+      summary: Update worker status using only a worker token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunnerWorkerUpdateRequest"
+      responses:
+        "200":
+          description: Updated run state.
 components:
   securitySchemes:
     SanctumCookie:
@@ -635,3 +680,43 @@ components:
           format: date-time
         agentId:
           type: string
+    RunnerClaimRequest:
+      type: object
+      required: [idProject, parallelRun, workerId]
+      properties:
+        idProject: {type: integer}
+        parallelRun: {type: integer}
+        workerId:
+          type: string
+          maxLength: 128
+        capabilities:
+          type: array
+          items: {type: string}
+    RunnerHeartbeatRequest:
+      type: object
+      required: [idProject, parallelRun, workerId]
+      properties:
+        idProject: {type: integer}
+        parallelRun: {type: integer}
+        workerId:
+          type: string
+          maxLength: 128
+        leaseSeconds:
+          type: integer
+          minimum: 15
+          maximum: 3600
+    RunnerWorkerUpdateRequest:
+      type: object
+      required: [idProject, parallelRun, workerId, status]
+      properties:
+        idProject: {type: integer}
+        parallelRun: {type: integer}
+        workerId:
+          type: string
+          maxLength: 128
+        status:
+          type: string
+          enum: [running, completed, failed, cancelled, lost]
+        result:
+          type: object
+          additionalProperties: true

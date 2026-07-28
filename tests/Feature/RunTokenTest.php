@@ -251,4 +251,78 @@ class RunTokenTest extends TestCase
             ->assertOk()
             ->assertJsonPath('activeWorkers', 1);
     }
+
+    public function test_token_only_runner_routes_do_not_require_customer_api_key(): void
+    {
+        $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
+
+        $claim = $this->withHeader('Idelium-Run-Token', $issued['token'])
+            ->postJson('/api/ideliumrunner/claim', [
+                'idProject' => $this->project->id,
+                'parallelRun' => $this->schedule->id,
+                'workerId' => 'agent-1',
+                'capabilities' => ['selenium'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('activeWorkers', 1)
+            ->assertJsonStructure(['workerToken', 'workerTokenExpiresAt']);
+        $workerToken = $claim->json('workerToken');
+
+        $event = AuditEvent::where('action', 'run_token.consume')->firstOrFail();
+        $this->assertSame('[REDACTED]', $event->afterValues['token']);
+        $this->assertSame('[REDACTED]', $event->afterValues['tokenId']);
+        $this->assertStringNotContainsString($issued['token'], json_encode($event->toArray()));
+
+        $this->withHeader('Idelium-Worker-Token', $workerToken)
+            ->postJson('/api/ideliumrunner/heartbeat', [
+                'idProject' => $this->project->id,
+                'parallelRun' => $this->schedule->id,
+                'workerId' => 'agent-1',
+                'leaseSeconds' => 300,
+            ])
+            ->assertOk()
+            ->assertJsonPath('activeWorkers', 1);
+
+        $this->withHeader('Idelium-Worker-Token', $workerToken)
+            ->putJson('/api/ideliumrunner/worker', [
+                'idProject' => $this->project->id,
+                'parallelRun' => $this->schedule->id,
+                'workerId' => 'agent-1',
+                'status' => ParallelRunSchedule::WORKER_COMPLETED,
+                'result' => ['tests' => 1],
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', ParallelRunSchedule::STATUS_COMPLETED);
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->getJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/results'
+            )
+            ->assertOk()
+            ->assertJsonMissingPath('workers.0.workerTokenHash')
+            ->assertJsonMissingPath('workers.0.workerTokenExpiresAt');
+    }
+
+    public function test_token_only_runner_heartbeat_rejects_invalid_worker_token(): void
+    {
+        $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
+
+        $this->withHeader('Idelium-Run-Token', $issued['token'])
+            ->postJson('/api/ideliumrunner/claim', [
+                'idProject' => $this->project->id,
+                'parallelRun' => $this->schedule->id,
+                'workerId' => 'agent-1',
+            ])
+            ->assertOk();
+
+        $this->withHeader('Idelium-Worker-Token', 'wrong-token')
+            ->postJson('/api/ideliumrunner/heartbeat', [
+                'idProject' => $this->project->id,
+                'parallelRun' => $this->schedule->id,
+                'workerId' => 'agent-1',
+            ])
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Worker token is invalid, expired, or not bound to this worker.');
+    }
 }

@@ -49,10 +49,24 @@ Response body:
 
 Revocation is idempotent. Revoked tokens cannot be consumed.
 
+## Token-only runner traffic
+
+Runner data-plane calls do not require `Idelium-Key`:
+
+- `POST /api/ideliumrunner/claim`
+- `POST /api/ideliumrunner/heartbeat`
+- `PUT /api/ideliumrunner/worker`
+
+`claim` consumes the one-time `Idelium-Run-Token` and returns a separate
+`workerToken` with the same lease window as the claimed worker. Heartbeat and
+worker status updates must send `Idelium-Worker-Token`. Worker token hashes are
+stored only inside the run worker state and are removed from result responses.
+
 ## Migration Policy
 
 Customer API keys remain supported for control-plane compatibility while CLI and
 Docker migrate token issuance to service-account or OIDC workload identity
-flows. Runner claim traffic must use short-lived run tokens. Set
+flows. Runner operational traffic should use the `/api/ideliumrunner/*`
+token-only endpoints. Set
 `IDELIUM_RUN_TOKEN_REQUIRED_FOR_CLAIM=false` only during a bounded legacy
 migration window.
