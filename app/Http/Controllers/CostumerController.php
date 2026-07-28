@@ -4,25 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Library\ApiKey;
 use App\Models\Costumer;
+use App\Services\CapabilityService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class CostumerController extends Controller
 {
+    public function __construct(private readonly CapabilityService $capabilities) {}
+
     public function index(Request $request)
     {
-        if (Auth::user()->role != 1) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'customers.manage');
 
         return Costumer::orderBy('created_at', 'asc')->get();
     }
 
     public function store(Request $request)
     {
-        if (Auth::user()->role != 1) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'customers.manage');
+
         $this->validate($request, [
             'costumer' => 'required',
         ]);
@@ -41,18 +41,15 @@ class CostumerController extends Controller
 
     public function show(Request $request, $id)
     {
-        if (Auth::user()->role != 1) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'customers.manage');
 
         return Costumer::findorFail($id);
     }
 
     public function getKey(Request $request)
     {
-        if (Auth::user()->role > 2) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'api_keys.manage');
+
         $costumers = Costumer::select('apiKey')
             ->where('id', Auth::user()->idCostumer)
             ->get();
@@ -65,9 +62,8 @@ class CostumerController extends Controller
 
     public function updateKey(Request $request)
     {
-        if (Auth::user()->role > 2) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'api_keys.manage');
+
         $apiKey = new ApiKey;
         $costumer = Costumer::findorFail(Auth::user()->idCostumer);
         $costumer->apiKey = $apiKey->generateApiSignature();
@@ -78,9 +74,8 @@ class CostumerController extends Controller
 
     public function update(Request $request, $id)
     {
-        if (Auth::user()->role != 1) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'customers.manage');
+
         $this->validate($request, [
             'costumer' => 'required',
             'description' => 'required',
@@ -96,9 +91,8 @@ class CostumerController extends Controller
 
     public function destroy(Request $request, $id)
     {
-        if (Auth::user()->role != 1) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($request->user(), 'customers.manage');
+
         $costumer = Costumer::findorFail($id);
         if ($costumer->delete()) {
             return Costumer::orderBy('created_at', 'asc')->get();

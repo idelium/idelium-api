@@ -4,6 +4,7 @@ use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\ArtifactDescriptorController;
+use App\Http\Controllers\CapabilityController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\HeaderController;
@@ -42,6 +43,8 @@ Route::post('login', [LoginController::class, 'login'])
     ->name('login');
 
 Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
+    Route::get('me/capabilities', [CapabilityController::class, 'me'])
+        ->name('capabilities.me');
     Route::post('logout', [LoginController::class, 'logout'])
         ->name('logout');
     /* menu */

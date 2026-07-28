@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\ArtifactDescriptor;
+use App\Services\CapabilityService;
 use Illuminate\Http\Request;
 
 class ArtifactDescriptorController extends Controller
 {
+    public function __construct(private readonly CapabilityService $capabilities) {}
+
     public function index(Request $request, int $idProject, int $performedTestCycleId)
     {
+        $this->capabilities->require($request->user(), 'artifacts.read');
         $context = $this->tenantContext($request);
 
         return response()->json([
@@ -28,6 +32,7 @@ class ArtifactDescriptorController extends Controller
         int $performedTestCycleId,
         ArtifactDescriptor $artifactDescriptor
     ) {
+        $this->capabilities->require($request->user(), 'artifacts.read');
         $context = $this->tenantContext($request);
 
         abort_unless(

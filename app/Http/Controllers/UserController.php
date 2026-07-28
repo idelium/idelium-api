@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\CapabilityService;
 use App\Services\PasswordPolicy;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
@@ -15,12 +16,12 @@ use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
+    public function __construct(private readonly CapabilityService $capabilities) {}
+
     public function index(Request $request)
     {
         $authenticatedUser = Auth::user();
-        if ($authenticatedUser->role > 2) {
-            return response()->json('ok');
-        }
+        $this->capabilities->require($authenticatedUser, 'accounts.manage');
 
         if ($authenticatedUser->role == 1) {
             return $this->accountQuery()
@@ -38,9 +39,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $authenticatedUser = Auth::user();
-        if ((int) $authenticatedUser->role > 2) {
-            abort(403);
-        }
+        $this->capabilities->require($authenticatedUser, 'accounts.manage');
 
         $validated = $this->validate($request, [
             'name' => 'required',
@@ -86,6 +85,8 @@ class UserController extends Controller
 
     public function updatePasswordUser(Request $request)
     {
+        $this->capabilities->require($request->user(), 'profile.manage');
+
         $validated = $this->validate($request, [
             'currentPassword' => 'required_without:current_password|string',
             'current_password' => 'required_without:currentPassword|string',
@@ -113,9 +114,7 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $authenticatedUser = Auth::user();
-        if ((int) $authenticatedUser->role > 2) {
-            abort(403);
-        }
+        $this->capabilities->require($authenticatedUser, 'accounts.manage');
 
         $validated = $this->validate($request, [
             'name' => 'required',
@@ -135,9 +134,7 @@ class UserController extends Controller
     public function destroy(Request $request, $id)
     {
         $authenticatedUser = Auth::user();
-        if ((int) $authenticatedUser->role > 2) {
-            abort(403);
-        }
+        $this->capabilities->require($authenticatedUser, 'accounts.manage');
 
         $user = $this->accountForMutation($authenticatedUser, $id);
         Gate::authorize('delete', $user);

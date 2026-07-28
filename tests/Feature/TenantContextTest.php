@@ -42,9 +42,9 @@ class TenantContextTest extends TestCase
             ->putJson('/api/menu/header/'.$this->secondCustomer->id)
             ->assertForbidden()
             ->assertExactJson([
-                'message' => 'Tenant switch is not authorized.',
+                'message' => 'The requested action is not authorized.',
                 'error' => [
-                    'code' => 'TENANT_SWITCH_FORBIDDEN',
+                    'code' => 'AUTHORIZATION_FORBIDDEN',
                 ],
             ]);
 

@@ -3,12 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditEvent;
+use App\Services\CapabilityService;
 use Illuminate\Http\Request;
 
 class AuditEventController extends Controller
 {
+    public function __construct(private readonly CapabilityService $capabilities) {}
+
     public function index(Request $request)
     {
+        $this->capabilities->require($request->user(), 'audit_events.read');
         $context = $this->tenantContext($request);
 
         $validated = $request->validate([

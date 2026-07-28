@@ -6,12 +6,16 @@ use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Costumer;
 use App\Models\Project;
 use App\Services\AuditEventService;
+use App\Services\CapabilityService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 class HeaderController extends Controller
 {
-    public function __construct(private readonly AuditEventService $auditEvents) {}
+    public function __construct(
+        private readonly AuditEventService $auditEvents,
+        private readonly CapabilityService $capabilities,
+    ) {}
 
     public function index(Request $request)
     {
@@ -39,14 +43,7 @@ class HeaderController extends Controller
         $user = $request->user();
         $targetTenantId = (int) $id;
 
-        if ((int) $user->role !== 1) {
-            return response()->json([
-                'message' => 'Tenant switch is not authorized.',
-                'error' => [
-                    'code' => 'TENANT_SWITCH_FORBIDDEN',
-                ],
-            ], 403);
-        }
+        $this->capabilities->require($user, 'tenant.switch');
 
         if (! $request->hasSession()) {
             return response()->json([
