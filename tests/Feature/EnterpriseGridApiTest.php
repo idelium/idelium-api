@@ -6,6 +6,7 @@ use App\Models\Costumer;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Step;
+use App\Models\Test;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -75,6 +76,63 @@ class EnterpriseGridApiTest extends TestCase
             ->assertJsonPath('meta.total', 0);
     }
 
+    public function test_tests_grid_preserves_legacy_array_response_without_grid_parameters(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        $this->createTest($customer, $project, 'Checkout flow');
+        $this->createTest($customer, $project, 'Login flow');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/tests/'.$project->id)
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonPath('0.name', 'Checkout flow')
+            ->assertJsonMissingPath('meta');
+    }
+
+    public function test_tests_grid_supports_server_side_search_filter_sort_and_pagination(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        $checkout = $this->createTest($customer, $project, 'Checkout flow', 'Browser checkout');
+        $this->createTest($customer, $project, 'Login flow', 'Browser login');
+        $this->createTest($customer, $project, 'Postman echo', 'API regression');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/tests/'.$project->id.'?page=1&pageSize=1&search=browser&sort=name&direction=asc&filter[id]='.$checkout->id
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $checkout->id)
+            ->assertJsonPath('data.0.name', 'Checkout flow')
+            ->assertJsonPath('meta.page', 1)
+            ->assertJsonPath('meta.pageSize', 1)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.sort', 'name')
+            ->assertJsonPath('meta.direction', 'asc')
+            ->assertJsonPath('meta.hasPreviousPage', false)
+            ->assertJsonPath('meta.hasNextPage', false);
+    }
+
+    public function test_tests_grid_remains_tenant_scoped_when_requested_as_grid(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $firstUser, $firstProject] = $this->createTenant('first');
+        [$secondCustomer, , $secondProject] = $this->createTenant('second');
+        $this->createTest($secondCustomer, $secondProject, 'Protected test');
+
+        Sanctum::actingAs($firstUser);
+
+        $this->getJson('/api/admin/tests/'.$secondProject->id.'?page=1&pageSize=10')
+            ->assertNotFound();
+        $this->getJson('/api/admin/tests/'.$firstProject->id.'?page=1&pageSize=10')
+            ->assertOk()
+            ->assertJsonPath('data', [])
+            ->assertJsonPath('meta.total', 0);
+    }
+
     private function createTenant(string $prefix): array
     {
         $customer = Costumer::forceCreate([
@@ -113,6 +171,21 @@ class EnterpriseGridApiTest extends TestCase
             'config' => json_encode([]),
             'idProject' => $project->id,
             'order' => $order,
+            'idCostumer' => $customer->id,
+        ]);
+    }
+
+    private function createTest(
+        Costumer $customer,
+        Project $project,
+        string $name,
+        string $description = 'Test'
+    ): Test {
+        return Test::forceCreate([
+            'name' => $name,
+            'description' => $description,
+            'config' => json_encode([]),
+            'idProject' => $project->id,
             'idCostumer' => $customer->id,
         ]);
     }
