@@ -40,6 +40,8 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'mfaRequired' => 'boolean',
+        'mfaConfirmedAt' => 'datetime',
+        'mfaRecoveryCodeHashes' => 'array',
         'isBreakGlass' => 'boolean',
         'lastBreakGlassTestAt' => 'datetime',
     ];

@@ -19,6 +19,7 @@ use App\Http\Controllers\IntegrationEndpointController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ModelDeviceController;
+use App\Http\Controllers\MfaController;
 use App\Http\Controllers\OsController;
 use App\Http\Controllers\OidcWorkloadIdentityController;
 use App\Http\Controllers\ParallelRunScheduleController;
@@ -83,6 +84,12 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('accounts.getuser');
     Route::put('admin/profile', [UserController::class, 'updatePasswordUser'])
         ->name('accounts.updatePasswordUser');
+    Route::post('admin/profile/mfa/enroll', [MfaController::class, 'enroll'])
+        ->name('mfa.enroll');
+    Route::post('admin/profile/mfa/confirm', [MfaController::class, 'confirm'])
+        ->name('mfa.confirm');
+    Route::post('admin/profile/mfa/step-up', [MfaController::class, 'stepUp'])
+        ->name('mfa.stepUp');
     /* accounts */
     Route::get('admin/accounts', [UserController::class, 'index'])
         ->name('accounts.index');

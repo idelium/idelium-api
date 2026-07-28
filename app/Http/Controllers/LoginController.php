@@ -43,7 +43,11 @@ class LoginController extends BaseController
         }
 
         $user = User::where('email', $request->input('email'))->first();
-        if ($user === null || ! Hash::check($request->input('password'), $user->password)) {
+        if (
+            $user === null
+            || ($user->status ?? 'active') !== 'active'
+            || ! Hash::check($request->input('password'), $user->password)
+        ) {
             return response()->json([
                 'message' => 'Invalid login details',
             ], 401);

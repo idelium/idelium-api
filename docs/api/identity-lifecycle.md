@@ -32,6 +32,15 @@ operator reason, and can record periodic access tests. Enablement, disablement,
 and tests are audited. Break-glass accounts are intentionally excluded from SCIM
 modification and should be monitored separately from daily-use accounts.
 
+## MFA lifecycle
+
+MFA enrollment generates a TOTP secret and recovery codes that are returned once.
+The API stores the TOTP secret encrypted and stores only recovery-code hashes.
+Confirmation validates a TOTP code before setting `mfaRequired=true`.
+Step-up verification accepts either a valid TOTP code or one recovery code,
+records a session timestamp, audits the attempt, and consumes used recovery
+codes. Disabled SCIM users cannot log in, even if they still know their password.
+
 ## Compatibility
 
 The identity lifecycle columns are additive. Existing users default to active,

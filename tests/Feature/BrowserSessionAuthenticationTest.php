@@ -77,6 +77,18 @@ class BrowserSessionAuthenticationTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_rejects_disabled_user_without_issuing_a_session(): void
+    {
+        $this->user->forceFill(['status' => 'disabled'])->save();
+
+        $this->withHeader('Origin', 'https://localhost')
+            ->postJson('/api/login', $this->credentials())
+            ->assertUnauthorized()
+            ->assertExactJson(['message' => 'Invalid login details']);
+
+        $this->assertGuest();
+    }
+
     public function test_authenticated_user_endpoint_returns_only_explicit_fields(): void
     {
         $this->actingAs($this->user);

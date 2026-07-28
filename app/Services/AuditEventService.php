@@ -100,7 +100,7 @@ class AuditEventService
     private function isSensitiveKey(string $key): bool
     {
         return preg_match(
-            '/password|passwd|secret|token|apikey|api_key|authorization|cookie|credential|session/i',
+            '/password|passwd|secret|token|apikey|api_key|authorization|cookie|credential|session|recovery/i',
             $key
         ) === 1;
     }
