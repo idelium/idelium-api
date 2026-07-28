@@ -28,7 +28,8 @@ class IdentityLifecycleController extends Controller
                 ->where('idCostumer', $context->activeTenantId)
                 ->orderBy('type')
                 ->orderBy('name')
-                ->get(),
+                ->get()
+                ->map(fn (IdentityProvider $provider): array => $this->serializeProvider($provider)),
         ]);
     }
 
@@ -83,7 +84,7 @@ class IdentityLifecycleController extends Controller
             ],
         );
 
-        return response()->json(['data' => $provider], $provider->wasRecentlyCreated ? 201 : 200);
+        return response()->json(['data' => $this->serializeProvider($provider)], $provider->wasRecentlyCreated ? 201 : 200);
     }
 
     public function scimUpsertUser(Request $request, IdentityProvider $identityProvider)
@@ -192,6 +193,24 @@ class IdentityLifecycleController extends Controller
             'externalId' => $user->externalId,
             'identityProviderId' => $user->identityProviderId,
             'lastBreakGlassTestAt' => optional($user->lastBreakGlassTestAt)->toISOString(),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeProvider(IdentityProvider $provider): array
+    {
+        return [
+            'id' => $provider->id,
+            'type' => $provider->type,
+            'name' => $provider->name,
+            'issuer' => $provider->issuer,
+            'audience' => $provider->audience,
+            'redirectUris' => $provider->redirectUris ?? [],
+            'groupRoleMap' => $provider->groupRoleMap ?? [],
+            'status' => $provider->status,
+            'metadata' => app(AuditEventService::class)->redact($provider->metadata ?? []),
         ];
     }
 }

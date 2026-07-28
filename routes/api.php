@@ -32,6 +32,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\ServiceAccountController;
 use App\Http\Controllers\SideBarController;
+use App\Http\Controllers\SsoAuthenticationController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\StepController;
 use App\Http\Controllers\TestController;
@@ -51,6 +52,15 @@ Route::post('login', [LoginController::class, 'login'])
     ->name('login');
 Route::post('oidc/token-exchange', [OidcWorkloadIdentityController::class, 'exchange'])
     ->name('oidc.token-exchange');
+Route::post('sso/{identityProvider}/start', [SsoAuthenticationController::class, 'start'])
+    ->whereNumber('identityProvider')
+    ->name('sso.start');
+Route::post('sso/{identityProvider}/oidc/callback', [SsoAuthenticationController::class, 'oidcCallback'])
+    ->whereNumber('identityProvider')
+    ->name('sso.oidcCallback');
+Route::post('sso/{identityProvider}/saml/callback', [SsoAuthenticationController::class, 'samlCallback'])
+    ->whereNumber('identityProvider')
+    ->name('sso.samlCallback');
 
 Route::prefix('ideliumrunner')->group(function () {
     Route::post('claim', [ParallelRunScheduleController::class, 'claimWorkerWithRunToken'])

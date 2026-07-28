@@ -41,6 +41,20 @@ Step-up verification accepts either a valid TOTP code or one recovery code,
 records a session timestamp, audits the attempt, and consumes used recovery
 codes. Disabled SCIM users cannot log in, even if they still know their password.
 
+## Browser SSO lifecycle
+
+Browser SSO starts with a stateful session request that records a one-time
+`state`, `nonce`, redirect URI, and provider id. OIDC callbacks validate JWT
+signature, issuer, audience, nonce, recipient, email verification, and assertion
+time bounds. SAML callbacks validate the signed response, issuer, audience,
+recipient, email verification, and assertion time bounds.
+
+SSO does not auto-create users. A callback can authenticate only an existing,
+active, same-tenant account with a verified IdP email. Break-glass accounts are
+rejected from normal SSO. Invalid state, replayed state, wrong issuer, wrong
+audience, expired assertion, unknown account, and missing browser-session cases
+fail closed and are audited.
+
 ## Compatibility
 
 The identity lifecycle columns are additive. Existing users default to active,

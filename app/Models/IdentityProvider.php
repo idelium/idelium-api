@@ -23,4 +23,9 @@ class IdentityProvider extends Model
         'groupRoleMap' => 'array',
         'metadata' => 'array',
     ];
+
+    public function metadataValue(string $key, mixed $default = null): mixed
+    {
+        return ($this->metadata ?? [])[$key] ?? $default;
+    }
 }
