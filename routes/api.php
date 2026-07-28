@@ -14,6 +14,7 @@ use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
 use App\Http\Controllers\ImportSeleniumController;
+use App\Http\Controllers\IntegrationEndpointController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\ModelDeviceController;
@@ -116,6 +117,33 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('agents.index');
     Route::put('admin/agents/{agentRegistration}/status', [AgentRegistrationController::class, 'updateStatus'])
         ->name('agents.updateStatus');
+    /* integrations */
+    Route::get('admin/projects/{idProject}/integrations', [IntegrationEndpointController::class, 'index'])
+        ->whereNumber('idProject')
+        ->name('integrations.index');
+    Route::post('admin/projects/{idProject}/integrations', [IntegrationEndpointController::class, 'store'])
+        ->whereNumber('idProject')
+        ->name('integrations.store');
+    Route::post(
+        'admin/projects/{idProject}/integrations/{integrationEndpoint}/test',
+        [IntegrationEndpointController::class, 'test']
+    )->whereNumber(['idProject', 'integrationEndpoint'])->name('integrations.test');
+    Route::put(
+        'admin/projects/{idProject}/integrations/{integrationEndpoint}/status',
+        [IntegrationEndpointController::class, 'updateStatus']
+    )->whereNumber(['idProject', 'integrationEndpoint'])->name('integrations.updateStatus');
+    Route::post(
+        'admin/projects/{idProject}/integrations/{integrationEndpoint}/rotate-secret',
+        [IntegrationEndpointController::class, 'rotateSecret']
+    )->whereNumber(['idProject', 'integrationEndpoint'])->name('integrations.rotateSecret');
+    Route::get(
+        'admin/projects/{idProject}/integration-deliveries',
+        [IntegrationEndpointController::class, 'deliveries']
+    )->whereNumber('idProject')->name('integrations.deliveries');
+    Route::post(
+        'admin/projects/{idProject}/integration-deliveries/{integrationDelivery}/replay',
+        [IntegrationEndpointController::class, 'replay']
+    )->whereNumber(['idProject', 'integrationDelivery'])->name('integrations.replay');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
     /* asset impact */
