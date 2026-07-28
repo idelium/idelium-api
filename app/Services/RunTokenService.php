@@ -74,6 +74,15 @@ class RunTokenService
         });
     }
 
+    public function revoke(RunToken $runToken): RunToken
+    {
+        if ($runToken->revokedAt === null) {
+            $runToken->forceFill(['revokedAt' => now()])->save();
+        }
+
+        return $runToken;
+    }
+
     /**
      * @return array{0: string, 1: string}
      */

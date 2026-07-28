@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Costumer;
+use App\Models\AgentRegistration;
 use App\Models\AuditEvent;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
@@ -94,6 +95,18 @@ class RunTokenTest extends TestCase
         $this->assertStringNotContainsString($response->json('token'), json_encode($event->toArray()));
     }
 
+    public function test_worker_claim_requires_short_lived_run_token(): void
+    {
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/claim',
+                ['workerId' => 'agent-1']
+            )
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'A short-lived run token is required to claim a worker slot.');
+    }
+
     public function test_runner_claim_consumes_short_lived_token_once(): void
     {
         $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
@@ -147,5 +160,95 @@ class RunTokenTest extends TestCase
             )
             ->assertUnprocessable()
             ->assertJsonValidationErrors('runToken');
+    }
+
+    public function test_run_token_revocation_is_audited_and_blocks_use(): void
+    {
+        $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
+        $tokenId = $issued['runToken']->tokenId;
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/tokens/'.$tokenId.'/revoke'
+            )
+            ->assertOk()
+            ->assertJsonPath('tokenId', $tokenId);
+
+        $event = AuditEvent::where('action', 'run_token.revoke')->firstOrFail();
+
+        $this->assertSame('[REDACTED]', $event->afterValues['tokenId']);
+        $this->assertStringNotContainsString($issued['token'], json_encode($event->toArray()));
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->withHeader('Idelium-Run-Token', $issued['token'])
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/claim',
+                ['workerId' => 'agent-1']
+            )
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('runToken');
+    }
+
+    public function test_agent_identity_proof_mismatch_is_rejected(): void
+    {
+        AgentRegistration::forceCreate([
+            'idCostumer' => $this->customer->id,
+            'agentId' => 'agent-1',
+            'status' => AgentRegistration::STATUS_APPROVED,
+            'version' => '1.0.14',
+            'runtimes' => ['selenium'],
+            'capabilities' => [],
+            'identityProof' => [
+                'certificateSha256' => str_repeat('a', 64),
+            ],
+            'maxConcurrency' => 1,
+            'health' => AgentRegistration::HEALTH_HEALTHY,
+            'lastSeenAt' => now(),
+        ]);
+        $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->withHeader('Idelium-Run-Token', $issued['token'])
+            ->withHeader('Idelium-Agent-Cert-Sha256', str_repeat('b', 64))
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/claim',
+                ['workerId' => 'agent-1']
+            )
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Agent identity proof is invalid for this run ownership request.');
+    }
+
+    public function test_agent_identity_proof_match_allows_claim(): void
+    {
+        $thumbprint = str_repeat('c', 64);
+        AgentRegistration::forceCreate([
+            'idCostumer' => $this->customer->id,
+            'agentId' => 'agent-1',
+            'status' => AgentRegistration::STATUS_APPROVED,
+            'version' => '1.0.14',
+            'runtimes' => ['selenium'],
+            'capabilities' => [],
+            'identityProof' => [
+                'certificateSha256' => $thumbprint,
+            ],
+            'maxConcurrency' => 1,
+            'health' => AgentRegistration::HEALTH_HEALTHY,
+            'lastSeenAt' => now(),
+        ]);
+        $issued = app(RunTokenService::class)->issue($this->schedule, 'agent-1');
+
+        $this->withHeader('Idelium-Key', $this->customer->apiKey)
+            ->withHeader('Idelium-Run-Token', $issued['token'])
+            ->withHeader('Idelium-Agent-Cert-Sha256', strtoupper($thumbprint))
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->project->id
+                .'/parallel-runs/'.$this->schedule->id.'/claim',
+                ['workerId' => 'agent-1']
+            )
+            ->assertOk()
+            ->assertJsonPath('activeWorkers', 1);
     }
 }

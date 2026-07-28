@@ -257,6 +257,57 @@ paths:
                 properties:
                   data:
                     $ref: "#/components/schemas/AgentRegistration"
+  /ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/tokens:
+    post:
+      tags: [ParallelRuns]
+      operationId: issueRunToken
+      summary: Issue a one-time short-lived run token for an agent.
+      security:
+        - IdeliumKey: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ParallelRunId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunTokenIssueRequest"
+      responses:
+        "201":
+          description: One-time-revealed run token.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunTokenIssueResponse"
+  /ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/tokens/{tokenId}/revoke:
+    post:
+      tags: [ParallelRuns]
+      operationId: revokeRunToken
+      summary: Revoke a short-lived run token.
+      security:
+        - IdeliumKey: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/ParallelRunId"
+        - name: tokenId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Token revoked.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tokenId, revokedAt]
+                properties:
+                  tokenId: {type: string}
+                  revokedAt:
+                    type: string
+                    format: date-time
 components:
   securitySchemes:
     SanctumCookie:
@@ -291,6 +342,13 @@ components:
         minimum: 1
     AssetVersionId:
       name: assetVersion
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    ParallelRunId:
+      name: parallelRun
       in: path
       required: true
       schema:
@@ -522,6 +580,8 @@ components:
         capabilities:
           type: object
           additionalProperties: true
+        identityProof:
+          $ref: "#/components/schemas/AgentIdentityProof"
         maxConcurrency:
           type: integer
           minimum: 1
@@ -545,6 +605,33 @@ components:
         capabilities:
           type: object
           additionalProperties: true
+        identityProof:
+          $ref: "#/components/schemas/AgentIdentityProof"
         maxConcurrency: {type: integer}
         health:
           $ref: "#/components/schemas/AgentHealth"
+    AgentIdentityProof:
+      type: object
+      properties:
+        certificateSha256:
+          type: string
+          pattern: "^[a-fA-F0-9]{64}$"
+    RunTokenIssueRequest:
+      type: object
+      required: [agentId]
+      properties:
+        agentId:
+          type: string
+          maxLength: 128
+    RunTokenIssueResponse:
+      type: object
+      required: [token, expiresAt, agentId]
+      properties:
+        token:
+          type: string
+          description: One-time-revealed run token.
+        expiresAt:
+          type: string
+          format: date-time
+        agentId:
+          type: string

@@ -37,6 +37,8 @@ class ParallelRunScheduleApiTest extends TestCase
     {
         parent::setUp();
 
+        config(['run_tokens.require_for_claim' => false]);
+
         Role::forceCreate(['id' => 3, 'name' => 'user']);
         $this->firstCustomer = $this->createCustomer('first-api-key', 'First customer');
         $this->secondCustomer = $this->createCustomer('second-api-key', 'Second customer');

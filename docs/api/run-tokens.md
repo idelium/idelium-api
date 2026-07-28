@@ -12,9 +12,16 @@ bound to tenant, project, run, and agent identity.
   `agentId`.
 - Tokens expire after `IDELIUM_RUN_TOKEN_TTL_SECONDS`, defaulting to 300
   seconds.
-- `claimWorker` consumes a token once when `Idelium-Run-Token` is provided.
+- `claimWorker` requires and consumes `Idelium-Run-Token` before opening worker
+  ownership.
+- Registered agents may include `identityProof.certificateSha256`; when present,
+  `claimWorker` requires the same thumbprint in `Idelium-Agent-Cert-Sha256`.
+  This supports mTLS termination at an ingress or load balancer while preserving
+  a reviewed workload identity binding at the API boundary.
 - Replay, wrong-agent, expired, revoked, and wrong-run attempts fail with a
   stable validation error.
+- Issuance, consumption, rejection, and revocation are audited with token values
+  redacted.
 
 ## Endpoint
 
@@ -38,8 +45,14 @@ Response body:
 }
 ```
 
-## Remaining Roadmap Work
+`POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/tokens/{tokenId}/revoke`
 
-Customer API keys are still supported for backward compatibility while CLI and
-Docker migrate. Full mTLS or equivalent workload identity, token revocation
-endpoints, and audit events for issuance/use/rejection remain open roadmap work.
+Revocation is idempotent. Revoked tokens cannot be consumed.
+
+## Migration Policy
+
+Customer API keys remain supported for control-plane compatibility while CLI and
+Docker migrate token issuance to service-account or OIDC workload identity
+flows. Runner claim traffic must use short-lived run tokens. Set
+`IDELIUM_RUN_TOKEN_REQUIRED_FOR_CLAIM=false` only during a bounded legacy
+migration window.

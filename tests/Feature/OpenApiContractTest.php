@@ -17,6 +17,10 @@ class OpenApiContractTest extends TestCase
         $this->assertArrayHasKey('/ideliumcl/agents/register', $contract['paths']);
         $this->assertArrayHasKey('/admin/projects/{idProject}/asset-impact/{assetType}/{assetId}', $contract['paths']);
         $this->assertArrayHasKey('/oidc/token-exchange', $contract['paths']);
+        $this->assertArrayHasKey(
+            '/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/tokens',
+            $contract['paths']
+        );
 
         $operationIds = [];
         foreach ($contract['paths'] as $path) {

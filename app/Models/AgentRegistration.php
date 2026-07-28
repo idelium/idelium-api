@@ -27,6 +27,7 @@ class AgentRegistration extends Model
     protected $casts = [
         'runtimes' => 'array',
         'capabilities' => 'array',
+        'identityProof' => 'array',
         'lastSeenAt' => 'datetime',
     ];
 }

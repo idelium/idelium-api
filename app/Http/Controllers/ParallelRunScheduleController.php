@@ -6,6 +6,7 @@ use App\Models\Costumer;
 use App\Models\AgentRegistration;
 use App\Models\ParallelRunSchedule;
 use App\Models\Project;
+use App\Models\RunToken;
 use App\Models\TestCycle;
 use App\Services\AuditEventService;
 use App\Services\AssetVersionService;
@@ -227,7 +228,7 @@ class ParallelRunScheduleController extends Controller
             'workerId' => ['required', 'string', 'max:128'],
             'capabilities' => ['sometimes', 'array'],
         ]);
-        $this->consumeRunTokenIfPresent(
+        $this->consumeRunToken(
             $request,
             $customer->id,
             $idProject,
@@ -236,6 +237,7 @@ class ParallelRunScheduleController extends Controller
         );
 
         $schedule = DB::transaction(function () use (
+            $request,
             $customer,
             $idProject,
             $parallelRun,
@@ -258,7 +260,7 @@ class ParallelRunScheduleController extends Controller
             $workers = $schedule->workerStates ?? [];
             $workerId = $validated['workerId'];
             $existing = $workers[$workerId] ?? null;
-            $this->assertAgentCanClaim($customer->id, $workerId);
+            $this->assertAgentCanClaim($customer->id, $workerId, $request);
 
             if ($existing === null && $schedule->activeWorkers >= $schedule->requestedConcurrency) {
                 abort(response()->json([
@@ -394,6 +396,46 @@ class ParallelRunScheduleController extends Controller
             'expiresAt' => $issued['runToken']->expiresAt->toISOString(),
             'agentId' => $issued['runToken']->agentId,
         ], 201);
+    }
+
+    public function revokeRunToken(
+        Request $request,
+        int $idProject,
+        int $parallelRun,
+        string $tokenId
+    ): JsonResponse {
+        $customer = $this->customerFromRequest($request);
+        $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun);
+        $runToken = RunToken::query()
+            ->where('idCostumer', $customer->id)
+            ->where('idProject', $idProject)
+            ->where('parallelRunScheduleId', $schedule->id)
+            ->where('tokenId', $tokenId)
+            ->firstOrFail();
+
+        $before = [
+            'tokenId' => $runToken->tokenId,
+            'revokedAt' => optional($runToken->revokedAt)->toISOString(),
+        ];
+        $runToken = $this->runTokens->revoke($runToken);
+        $this->auditEvents->record(
+            $request,
+            'run_token.revoke',
+            'parallel_run_schedule',
+            (string) $schedule->id,
+            beforeValues: $before,
+            afterValues: [
+                'agentId' => $runToken->agentId,
+                'tokenId' => $runToken->tokenId,
+                'revokedAt' => $runToken->revokedAt->toISOString(),
+            ],
+            projectId: $schedule->idProject,
+        );
+
+        return response()->json([
+            'tokenId' => $runToken->tokenId,
+            'revokedAt' => $runToken->revokedAt->toISOString(),
+        ]);
     }
 
     public function updateWorker(
@@ -545,7 +587,7 @@ class ParallelRunScheduleController extends Controller
         return $filters;
     }
 
-    private function consumeRunTokenIfPresent(
+    private function consumeRunToken(
         Request $request,
         int $tenantId,
         int $projectId,
@@ -554,7 +596,13 @@ class ParallelRunScheduleController extends Controller
     ): void {
         $token = $request->header('Idelium-Run-Token');
         if (! is_string($token) || $token === '') {
-            return;
+            if (! (bool) config('run_tokens.require_for_claim', true)) {
+                return;
+            }
+
+            abort(response()->json([
+                'message' => 'A short-lived run token is required to claim a worker slot.',
+            ], 401));
         }
 
         try {
@@ -596,7 +644,7 @@ class ParallelRunScheduleController extends Controller
         }
     }
 
-    private function assertAgentCanClaim(int $tenantId, string $workerId): void
+    private function assertAgentCanClaim(int $tenantId, string $workerId, Request $request): void
     {
         $agent = AgentRegistration::query()
             ->where('idCostumer', $tenantId)
@@ -607,6 +655,8 @@ class ParallelRunScheduleController extends Controller
             return;
         }
 
+        $this->assertAgentIdentityProof($agent, $request);
+
         if (
             $agent->status !== AgentRegistration::STATUS_APPROVED
             || $agent->health === AgentRegistration::HEALTH_UNHEALTHY
@@ -616,6 +666,21 @@ class ParallelRunScheduleController extends Controller
                 'agentStatus' => $agent->status,
                 'agentHealth' => $agent->health,
             ], 409));
+        }
+    }
+
+    private function assertAgentIdentityProof(AgentRegistration $agent, Request $request): void
+    {
+        $expected = $agent->identityProof['certificateSha256'] ?? null;
+        if ($expected === null) {
+            return;
+        }
+
+        $presented = $request->header('Idelium-Agent-Cert-Sha256');
+        if (! is_string($presented) || ! hash_equals(strtolower($expected), strtolower($presented))) {
+            abort(response()->json([
+                'message' => 'Agent identity proof is invalid for this run ownership request.',
+            ], 401));
         }
     }
 

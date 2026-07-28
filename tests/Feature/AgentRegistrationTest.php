@@ -31,6 +31,8 @@ class AgentRegistrationTest extends TestCase
     {
         parent::setUp();
 
+        config(['run_tokens.require_for_claim' => false]);
+
         Role::forceCreate(['id' => 2, 'name' => 'admin']);
         Role::forceCreate(['id' => 3, 'name' => 'user']);
         $this->customer = $this->customer('agent-api-key', 'Agent customer');

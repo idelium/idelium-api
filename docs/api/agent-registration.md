@@ -18,6 +18,9 @@ The request is authenticated with the normal `Idelium-Key` header.
     "browsers": ["chrome"],
     "platforms": ["linux"]
   },
+  "identityProof": {
+    "certificateSha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  },
   "maxConcurrency": 2,
   "health": "healthy"
 }
@@ -26,6 +29,12 @@ The request is authenticated with the normal `Idelium-Key` header.
 New agents are created as `pending`. Re-registering an existing agent refreshes
 its version, runtime support, capabilities, capacity, health, and `lastSeenAt`
 without changing its approval status.
+
+`identityProof.certificateSha256` is optional. When it is present, worker claim
+requests must present the same certificate thumbprint in
+`Idelium-Agent-Cert-Sha256` together with a valid one-time run token. This lets
+operators terminate mTLS at infrastructure boundaries while keeping agent
+identity enforcement inside the API.
 
 ## Web administration
 

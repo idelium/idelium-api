@@ -339,6 +339,8 @@ Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
         ->name('cl.parallelruns.heartbeatWorker');
     Route::post('projects/{idProject}/parallel-runs/{parallelRun}/tokens', [ParallelRunScheduleController::class, 'issueRunToken'])
         ->name('cl.parallelruns.issueRunToken');
+    Route::post('projects/{idProject}/parallel-runs/{parallelRun}/tokens/{tokenId}/revoke', [ParallelRunScheduleController::class, 'revokeRunToken'])
+        ->name('cl.parallelruns.revokeRunToken');
     Route::put('projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}', [ParallelRunScheduleController::class, 'updateWorker'])
         ->name('cl.parallelruns.updateWorker');
     Route::post('projects/{idProject}/parallel-runs/{parallelRun}/cancel', [ParallelRunScheduleController::class, 'cancel'])
