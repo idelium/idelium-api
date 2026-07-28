@@ -94,12 +94,25 @@ download URLs:
 
 ```json
 {
+  "id": 123,
   "format": "json",
-  "status": "completed",
-  "url": "/api/reports/44.json",
+  "status": "queued",
+  "ready": false,
+  "url": "/api/admin/result-exports/123/download",
   "expiresAt": "2026-07-28T15:00:00Z"
 }
 ```
+
+`POST /api/admin/result-exports` returns `202 Accepted`, persists the descriptor
+as `queued`, and dispatches `GenerateResultExportJob`. The status endpoint then
+returns one of:
+
+| Status | Meaning |
+| --- | --- |
+| `queued` | The export has been accepted and is waiting for the queue worker. |
+| `completed` | The export payload is ready and `ready` is `true`. |
+| `failed` | Generation failed; `errorMessage` contains a bounded diagnostic. |
+| `expired` | The descriptor expired before a payload could be generated. |
 
 The Web client only enables downloads for completed, same-origin descriptors
 that have not expired. Durable export endpoints keep the same descriptor fields

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\GenerateResultExportJob;
 use App\Models\Costumer;
 use App\Models\PerformedStep;
 use App\Models\PerformedTest;
@@ -12,8 +13,10 @@ use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
 use App\Models\User;
+use App\Services\ResultExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -28,20 +31,39 @@ class ResultExportTest extends TestCase
         $hierarchy = $this->createPerformedHierarchy($customer);
 
         Sanctum::actingAs($user);
+        Queue::fake();
 
         $descriptor = $this->postJson('/api/admin/result-exports', [
             'performedTestCycleId' => $hierarchy['performedCycle']->id,
             'format' => 'json',
-        ])->assertCreated()
+        ])->assertAccepted()
             ->assertJsonPath('format', 'json')
-            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('status', 'queued')
             ->assertJsonPath('authorized', true)
+            ->assertJsonPath('ready', false)
             ->json();
+
+        Queue::assertPushed(
+            GenerateResultExportJob::class,
+            fn (GenerateResultExportJob $job): bool => $job->resultExportId() === $descriptor['id']
+        );
 
         $this->getJson('/api/admin/result-exports/'.$descriptor['id'])
             ->assertOk()
             ->assertJsonPath('id', $descriptor['id'])
+            ->assertJsonPath('status', 'queued')
             ->assertJsonPath('url', $descriptor['url']);
+
+        $this->get($descriptor['url'])
+            ->assertStatus(409);
+
+        (new GenerateResultExportJob($descriptor['id']))->handle(app(ResultExportService::class));
+
+        $this->getJson('/api/admin/result-exports/'.$descriptor['id'])
+            ->assertOk()
+            ->assertJsonPath('id', $descriptor['id'])
+            ->assertJsonPath('status', 'completed')
+            ->assertJsonPath('ready', true);
 
         $this->get($descriptor['url'])
             ->assertOk()
@@ -58,10 +80,11 @@ class ResultExportTest extends TestCase
         $hierarchy = $this->createPerformedHierarchy($firstCustomer);
 
         Sanctum::actingAs($firstUser);
+        Queue::fake();
         $descriptor = $this->postJson('/api/admin/result-exports', [
             'performedTestCycleId' => $hierarchy['performedCycle']->id,
             'format' => 'markdown',
-        ])->assertCreated()->json();
+        ])->assertAccepted()->json();
 
         Sanctum::actingAs($secondUser);
         $this->getJson('/api/admin/result-exports/'.$descriptor['id'])
