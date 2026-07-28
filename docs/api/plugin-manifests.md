@@ -29,6 +29,15 @@ source code, the API wraps it into an `unapproved` enterprise manifest. This mak
 the saved plugin visible and editable, but not executable by the enterprise CLI
 until an approval process stores a reviewed manifest with a matching hash.
 
+The admin plugin list does not expose source code. It exposes only execution
+metadata required by the UI:
+
+- `approvalStatus`
+- `sourceSha256`
+- `provenanceReviewed`
+- `pluginApiVersion`
+- `executionMode`
+
 ## Security rules
 
 - Unapproved plugins are persisted but must not execute.

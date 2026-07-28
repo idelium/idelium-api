@@ -61,7 +61,16 @@ class PluginManifestContractTest extends TestCase
             'description' => 'Legacy step',
             'code' => [$source],
             'idProject' => $this->project->id,
-        ])->assertOk();
+        ])->assertOk()
+            ->assertJsonFragment([
+                'name' => 'legacy_step',
+                'approvalStatus' => PluginManifestService::UNAPPROVED_STATUS,
+                'sourceSha256' => hash('sha256', $source),
+                'provenanceReviewed' => false,
+                'pluginApiVersion' => PluginManifestService::API_VERSION,
+                'executionMode' => 'subprocess',
+            ])
+            ->assertJsonMissingPath('0.code');
 
         $plugin = Plugin::where('name', 'legacy_step')->firstOrFail();
         $manifest = json_decode($plugin->code, true, flags: JSON_THROW_ON_ERROR);

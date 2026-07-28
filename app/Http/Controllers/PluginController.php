@@ -21,13 +21,20 @@ class PluginController extends Controller
     {
         $this->tenantResources->project($request->user(), $idProject);
 
-        return Plugin::select('id', 'name', 'description')->where(
+        return Plugin::select('id', 'name', 'description', 'code')->where(
             'idProject',
             $idProject
         )->where(
             'idCostumer',
             $request->user()->idCostumer
-        )->get();
+        )->get()->map(function (Plugin $plugin) {
+            return [
+                'id' => $plugin->id,
+                'name' => $plugin->name,
+                'description' => $plugin->description,
+                ...$this->pluginManifests->metadata($plugin),
+            ];
+        });
     }
 
     public function store(StorePluginRequest $request)

@@ -65,6 +65,22 @@ class PluginManifestService
         return json_encode($manifest, JSON_THROW_ON_ERROR);
     }
 
+    public function metadata(Plugin $plugin): array
+    {
+        $manifest = $this->normalizeForStorage(
+            $this->decodeStoredCode($plugin->code),
+            $plugin->name
+        );
+
+        return [
+            'approvalStatus' => $manifest['approvalStatus'],
+            'sourceSha256' => $manifest['sourceSha256'],
+            'provenanceReviewed' => $manifest['provenance']['reviewed'],
+            'pluginApiVersion' => $manifest['apiVersion'],
+            'executionMode' => $manifest['execution']['mode'],
+        ];
+    }
+
     public function sourceHash(string $source): string
     {
         return hash('sha256', $source);
