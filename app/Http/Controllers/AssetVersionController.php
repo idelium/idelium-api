@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetVersion;
+use App\Models\AssetVersionReviewEvent;
+use App\Services\AuditEventService;
 use App\Services\AssetVersionService;
 use App\Services\CapabilityService;
 use App\Services\TenantResourceService;
@@ -16,6 +18,7 @@ class AssetVersionController extends Controller
         private readonly AssetVersionService $assetVersions,
         private readonly CapabilityService $capabilities,
         private readonly TenantResourceService $tenantResources,
+        private readonly AuditEventService $auditEvents,
     ) {}
 
     public function index(
@@ -82,6 +85,55 @@ class AssetVersionController extends Controller
         return response()->json([
             'data' => $this->assetVersions->diff($fromVersion, $toVersion),
         ]);
+    }
+
+    public function transitionReview(
+        Request $request,
+        int $idProject,
+        AssetVersion $assetVersion
+    ): JsonResponse {
+        $this->capabilities->require($request->user(), 'resources.manage');
+        $this->assertOwnedVersion($request, $idProject, $assetVersion);
+        $validated = $request->validate([
+            'toStatus' => [
+                'required',
+                'string',
+                Rule::in([
+                    AssetVersionReviewEvent::STATUS_IN_REVIEW,
+                    AssetVersionReviewEvent::STATUS_APPROVED,
+                    AssetVersionReviewEvent::STATUS_DEPRECATED,
+                ]),
+            ],
+            'comment' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $fromStatus = $this->assetVersions->currentReviewStatus($assetVersion);
+        $event = $this->assetVersions->transitionReview(
+            $request,
+            $assetVersion,
+            $validated['toStatus'],
+            $validated['comment'] ?? null
+        );
+
+        $this->auditEvents->record(
+            $request,
+            'asset_version.review_transitioned',
+            'asset_version',
+            (string) $assetVersion->id,
+            projectId: (int) $assetVersion->idProject,
+            beforeValues: ['status' => $fromStatus],
+            afterValues: ['status' => $event->toStatus],
+            metadata: [
+                'assetType' => $assetVersion->assetType,
+                'assetId' => $assetVersion->assetId,
+                'version' => $assetVersion->version,
+                'reviewEventId' => $event->id,
+            ]
+        );
+
+        return response()->json([
+            'data' => $this->assetVersions->reviewEventResponse($event),
+        ], 201);
     }
 
     private function assertOwnedVersion(

@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\AssetVersion;
+use App\Models\AssetVersionReviewEvent;
+use App\Models\AuditEvent;
 use App\Models\Costumer;
 use App\Models\Project;
 use App\Models\Role;
@@ -21,10 +23,13 @@ class AssetVersioningTest extends TestCase
 
     private Project $project;
 
+    private User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
+        Role::forceCreate(['id' => 2, 'name' => 'admin']);
         Role::forceCreate(['id' => 3, 'name' => 'user']);
         $this->customer = Costumer::forceCreate([
             'costumer' => 'Demo customer',
@@ -38,14 +43,15 @@ class AssetVersioningTest extends TestCase
             'description' => 'Demo project',
             'idCostumer' => $this->customer->id,
         ]);
-        $this->actingAs(User::forceCreate([
+        $this->user = User::forceCreate([
             'name' => 'Test user',
             'role' => 3,
             'email' => 'asset-version@example.test',
             'email_verified_at' => now(),
             'password' => Hash::make('SensitivePassword123!'),
             'idCostumer' => $this->customer->id,
-        ]));
+        ]);
+        $this->actingAs($this->user);
     }
 
     public function test_step_create_and_update_records_immutable_versions(): void
@@ -201,6 +207,78 @@ class AssetVersioningTest extends TestCase
         )->assertNotFound();
     }
 
+    public function test_asset_version_review_transitions_are_recorded_and_audited(): void
+    {
+        $manager = $this->manager();
+        $this->actingAs($manager);
+        $step = $this->step(['name' => 'Reviewed step']);
+        $version = $this->version($step, 1, [
+            'name' => 'Reviewed step',
+        ]);
+
+        $this->postJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id.'/review-events',
+            [
+                'toStatus' => AssetVersionReviewEvent::STATUS_IN_REVIEW,
+                'comment' => 'Ready for reviewer validation.',
+            ]
+        )->assertCreated()
+            ->assertJsonPath('data.fromStatus', AssetVersionReviewEvent::STATUS_DRAFT)
+            ->assertJsonPath('data.toStatus', AssetVersionReviewEvent::STATUS_IN_REVIEW)
+            ->assertJsonPath('data.comment', 'Ready for reviewer validation.');
+
+        $this->postJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id.'/review-events',
+            [
+                'toStatus' => AssetVersionReviewEvent::STATUS_APPROVED,
+                'comment' => 'Approved for protected executions.',
+            ]
+        )->assertCreated()
+            ->assertJsonPath('data.fromStatus', AssetVersionReviewEvent::STATUS_IN_REVIEW)
+            ->assertJsonPath('data.toStatus', AssetVersionReviewEvent::STATUS_APPROVED);
+
+        $this->getJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id
+        )->assertOk()
+            ->assertJsonPath('data.review.status', AssetVersionReviewEvent::STATUS_APPROVED)
+            ->assertJsonPath('data.review.authorUserId', $this->user->id);
+
+        $this->assertSame(2, AssetVersionReviewEvent::count());
+        $this->assertSame(2, AuditEvent::where('action', 'asset_version.review_transitioned')->count());
+    }
+
+    public function test_asset_author_cannot_approve_own_version(): void
+    {
+        $author = $this->manager();
+        $step = $this->step(['name' => 'Own version']);
+        $version = $this->version($step, 1, [
+            'name' => 'Own version',
+        ], $author->id);
+
+        $this->actingAs($author);
+        $this->postJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id.'/review-events',
+            ['toStatus' => AssetVersionReviewEvent::STATUS_IN_REVIEW]
+        )->assertCreated();
+
+        $this->postJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id.'/review-events',
+            ['toStatus' => AssetVersionReviewEvent::STATUS_APPROVED]
+        )->assertStatus(422)
+            ->assertJsonPath('message', 'Asset authors cannot approve their own versions.');
+    }
+
+    public function test_read_only_role_cannot_transition_asset_review_state(): void
+    {
+        $step = $this->step(['name' => 'Read only']);
+        $version = $this->version($step, 1, ['name' => 'Read only']);
+
+        $this->postJson(
+            '/api/admin/projects/'.$this->project->id.'/asset-versions/'.$version->id.'/review-events',
+            ['toStatus' => AssetVersionReviewEvent::STATUS_IN_REVIEW]
+        )->assertForbidden();
+    }
+
     private function step(array $attributes = []): Step
     {
         return Step::forceCreate(array_merge([
@@ -216,7 +294,12 @@ class AssetVersioningTest extends TestCase
     /**
      * @param array<string, mixed> $snapshot
      */
-    private function version(Step $step, int $version, array $snapshot): AssetVersion
+    private function version(
+        Step $step,
+        int $version,
+        array $snapshot,
+        ?int $actorUserId = null
+    ): AssetVersion
     {
         return AssetVersion::forceCreate([
             'idCostumer' => $this->customer->id,
@@ -224,9 +307,21 @@ class AssetVersioningTest extends TestCase
             'assetType' => 'step',
             'assetId' => $step->id,
             'version' => $version,
-            'actorUserId' => null,
+            'actorUserId' => $actorUserId ?? $this->user->id,
             'reason' => $version === 1 ? 'asset.created' : 'asset.updated',
             'snapshot' => $snapshot,
+        ]);
+    }
+
+    private function manager(): User
+    {
+        return User::forceCreate([
+            'name' => 'Review manager',
+            'role' => 2,
+            'email' => 'review-manager-'.uniqid().'@example.test',
+            'email_verified_at' => now(),
+            'password' => Hash::make('SensitivePassword123!'),
+            'idCostumer' => $this->customer->id,
         ]);
     }
 }

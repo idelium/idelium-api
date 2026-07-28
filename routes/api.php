@@ -108,6 +108,10 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         'admin/projects/{idProject}/asset-versions/{fromVersion}/diff/{toVersion}',
         [AssetVersionController::class, 'diff']
     )->whereNumber(['fromVersion', 'toVersion'])->name('assetversions.diff');
+    Route::post(
+        'admin/projects/{idProject}/asset-versions/{assetVersion}/review-events',
+        [AssetVersionController::class, 'transitionReview']
+    )->whereNumber('assetVersion')->name('assetversions.transitionReview');
     Route::get(
         'admin/projects/{idProject}/asset-versions/{assetVersion}',
         [AssetVersionController::class, 'show']

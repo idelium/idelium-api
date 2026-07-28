@@ -7,6 +7,8 @@ reference the exact definitions that were approved and used.
 
 - `asset_versions` stores append-only snapshots for `step`, `test`,
   `test_cycle`, and `environment` assets.
+- `asset_version_review_events` stores append-only review lifecycle transitions
+  for immutable asset versions.
 - Create and update operations record a new version with tenant, project, asset
   type, asset ID, version number, actor, timestamp, reason, and snapshot.
 - Asset versions cannot be updated or deleted through the `AssetVersion` model.
@@ -32,7 +34,27 @@ Authenticated Web clients can inspect asset history without mutating any asset:
 All endpoints require the `resources.read` capability and are scoped by both
 tenant and project. Cross-tenant or cross-project versions return `404`.
 
+## Review lifecycle API
+
+Asset versions start in `draft` status. Review transitions are stored as
+append-only events so the version snapshot remains immutable.
+
+- `POST /api/admin/projects/{idProject}/asset-versions/{assetVersion}/review-events`
+  creates a validated transition event. Accepted target states are `in_review`,
+  `approved`, and `deprecated`.
+
+The supported transitions are:
+
+- `draft` -> `in_review`
+- `in_review` -> `approved`
+- `in_review` -> `deprecated`
+- `approved` -> `deprecated`
+
+The transition endpoint requires the `resources.manage` capability, records an
+audit event, and rejects approvals where the reviewer is the same user who
+authored the version.
+
 ## Remaining Roadmap Work
 
-Approval state, rollback, import/export version contracts, richer CLI snapshot
-delivery, and Web history views remain open roadmap work.
+Protected-environment enforcement, rollback, import/export version contracts,
+richer CLI snapshot delivery, and Web history views remain open roadmap work.

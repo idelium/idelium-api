@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\AssetVersion;
+use App\Models\AssetVersionReviewEvent;
 use App\Models\TestCycle;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -119,6 +121,7 @@ class AssetVersionService
      */
     public function response(AssetVersion $version, bool $includeSnapshot = true): array
     {
+        $reviewEvent = $this->latestReviewEvent($version);
         $payload = [
             'id' => $version->id,
             'idProject' => $version->idProject,
@@ -128,6 +131,7 @@ class AssetVersionService
             'actorUserId' => $version->actorUserId,
             'reason' => $version->reason,
             'createdAt' => optional($version->created_at)->toISOString(),
+            'review' => $this->reviewResponse($version, $reviewEvent),
         ];
 
         if ($includeSnapshot) {
@@ -135,6 +139,50 @@ class AssetVersionService
         }
 
         return $payload;
+    }
+
+    public function transitionReview(
+        Request $request,
+        AssetVersion $assetVersion,
+        string $toStatus,
+        ?string $comment = null
+    ): AssetVersionReviewEvent {
+        return DB::transaction(function () use ($request, $assetVersion, $toStatus, $comment) {
+            $fromStatus = $this->currentReviewStatus($assetVersion);
+            $this->assertAllowedReviewTransition($request, $assetVersion, $fromStatus, $toStatus);
+
+            return AssetVersionReviewEvent::create([
+                'idCostumer' => $assetVersion->idCostumer,
+                'idProject' => $assetVersion->idProject,
+                'assetVersionId' => $assetVersion->id,
+                'fromStatus' => $fromStatus,
+                'toStatus' => $toStatus,
+                'comment' => $comment,
+                'actorUserId' => optional($request->user())->id,
+            ]);
+        });
+    }
+
+    public function currentReviewStatus(AssetVersion $assetVersion): string
+    {
+        return $this->latestReviewEvent($assetVersion)?->toStatus
+            ?? AssetVersionReviewEvent::STATUS_DRAFT;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function reviewEventResponse(AssetVersionReviewEvent $event): array
+    {
+        return [
+            'id' => $event->id,
+            'assetVersionId' => $event->assetVersionId,
+            'fromStatus' => $event->fromStatus,
+            'toStatus' => $event->toStatus,
+            'comment' => $event->comment,
+            'actorUserId' => $event->actorUserId,
+            'createdAt' => optional($event->created_at)->toISOString(),
+        ];
     }
 
     /**
@@ -154,6 +202,72 @@ class AssetVersionService
             ->where('assetId', $assetId)
             ->orderByDesc('version')
             ->first();
+    }
+
+    private function latestReviewEvent(AssetVersion $assetVersion): ?AssetVersionReviewEvent
+    {
+        return AssetVersionReviewEvent::query()
+            ->where('idCostumer', $assetVersion->idCostumer)
+            ->where('idProject', $assetVersion->idProject)
+            ->where('assetVersionId', $assetVersion->id)
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reviewResponse(
+        AssetVersion $assetVersion,
+        ?AssetVersionReviewEvent $event
+    ): array {
+        return [
+            'status' => $event?->toStatus ?? AssetVersionReviewEvent::STATUS_DRAFT,
+            'lastEventId' => $event?->id,
+            'lastComment' => $event?->comment,
+            'reviewedByUserId' => $event?->actorUserId,
+            'reviewedAt' => optional($event?->created_at)->toISOString(),
+            'authorUserId' => $assetVersion->actorUserId,
+        ];
+    }
+
+    private function assertAllowedReviewTransition(
+        Request $request,
+        AssetVersion $assetVersion,
+        string $fromStatus,
+        string $toStatus
+    ): void {
+        $allowed = [
+            AssetVersionReviewEvent::STATUS_DRAFT => [
+                AssetVersionReviewEvent::STATUS_IN_REVIEW,
+            ],
+            AssetVersionReviewEvent::STATUS_IN_REVIEW => [
+                AssetVersionReviewEvent::STATUS_APPROVED,
+                AssetVersionReviewEvent::STATUS_DEPRECATED,
+            ],
+            AssetVersionReviewEvent::STATUS_APPROVED => [
+                AssetVersionReviewEvent::STATUS_DEPRECATED,
+            ],
+            AssetVersionReviewEvent::STATUS_DEPRECATED => [],
+        ];
+
+        if (! in_array($toStatus, $allowed[$fromStatus] ?? [], true)) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'The requested review transition is not allowed.',
+                'fromStatus' => $fromStatus,
+                'toStatus' => $toStatus,
+            ], 422));
+        }
+
+        if (
+            $toStatus === AssetVersionReviewEvent::STATUS_APPROVED
+            && $assetVersion->actorUserId !== null
+            && (int) $assetVersion->actorUserId === (int) optional($request->user())->id
+        ) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Asset authors cannot approve their own versions.',
+            ], 422));
+        }
     }
 
     /**
