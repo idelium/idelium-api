@@ -186,6 +186,7 @@ Response and ownership contracts are documented separately:
 - [Test tool support contract](docs/api/test-tool-support.md)
 - [Test tool schema migration policy](docs/api/schema-migration-policy.md)
 - [Performed result contracts](docs/api/result-contracts.md)
+- [OpenAPI v1 contract](docs/api/openapi-v1.md)
 - [Remote launcher TLS policy](docs/api/remote-launch-tls.md)
 - [Transactional mutations](docs/database/transactional-mutations.md)
 

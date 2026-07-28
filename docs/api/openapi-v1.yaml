@@ -1,0 +1,496 @@
+openapi: 3.1.0
+info:
+  title: Idelium API
+  version: 1.0.0
+  description: Stable public API contract for Idelium Web and CLI integrations.
+servers:
+  - url: https://localhost/api
+    description: Local Docker quickstart
+security:
+  - SanctumCookie: []
+  - IdeliumKey: []
+tags:
+  - name: ParallelRuns
+  - name: Agents
+  - name: AssetVersions
+  - name: AssetImpact
+paths:
+  /admin/projects/{idProject}/parallel-runs:
+    get:
+      tags: [ParallelRuns]
+      operationId: listParallelRuns
+      summary: List tenant-scoped parallel runs for a project.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/RunCommitFilter"
+        - $ref: "#/components/parameters/RunBranchFilter"
+        - $ref: "#/components/parameters/RunPipelineFilter"
+      responses:
+        "200":
+          description: Parallel runs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ParallelRun"
+    post:
+      tags: [ParallelRuns]
+      operationId: createParallelRun
+      summary: Schedule one parallel run.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ParallelRunCreateRequest"
+      responses:
+        "201":
+          description: Created or reused idempotent run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParallelRun"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/projects/{idProject}/parallel-runs/matrix:
+    post:
+      tags: [ParallelRuns]
+      operationId: createMatrixParallelRuns
+      summary: Expand a platform/browser/device/environment matrix into runs.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MatrixRunCreateRequest"
+      responses:
+        "201":
+          description: Generated or reused matrix runs.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatrixRunCreateResponse"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/projects/{idProject}/asset-impact/{assetType}/{assetId}:
+    get:
+      tags: [AssetImpact]
+      operationId: getAssetImpact
+      summary: Inspect impacted tests and test cycles before changing an asset.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/AssetType"
+        - $ref: "#/components/parameters/AssetId"
+      responses:
+        "200":
+          description: Impact graph.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AssetImpact"
+  /admin/projects/{idProject}/asset-versions/{assetType}/{assetId}:
+    get:
+      tags: [AssetVersions]
+      operationId: listAssetVersions
+      summary: List immutable versions for an asset.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/AssetType"
+        - $ref: "#/components/parameters/AssetId"
+      responses:
+        "200":
+          description: Asset versions.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AssetVersionSummary"
+  /admin/projects/{idProject}/asset-versions/{assetVersion}/review-events:
+    post:
+      tags: [AssetVersions]
+      operationId: createAssetVersionReviewEvent
+      summary: Transition an immutable asset version review state.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/AssetVersionId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetVersionReviewTransitionRequest"
+      responses:
+        "201":
+          description: Created review event.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AssetVersionReviewEvent"
+  /admin/agents:
+    get:
+      tags: [Agents]
+      operationId: listAgents
+      summary: List execution agents for the active tenant.
+      security:
+        - SanctumCookie: []
+      responses:
+        "200":
+          description: Agent inventory.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AgentRegistration"
+  /admin/agents/{agentRegistration}/status:
+    put:
+      tags: [Agents]
+      operationId: updateAgentStatus
+      summary: Change an execution agent lifecycle status.
+      security:
+        - SanctumCookie: []
+      parameters:
+        - name: agentRegistration
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  $ref: "#/components/schemas/AgentStatus"
+      responses:
+        "200":
+          description: Updated agent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AgentRegistration"
+  /ideliumcl/agents/register:
+    post:
+      tags: [Agents]
+      operationId: registerAgent
+      summary: Register or refresh an execution agent using Idelium-Key.
+      security:
+        - IdeliumKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AgentRegisterRequest"
+      responses:
+        "201":
+          description: New pending agent.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    $ref: "#/components/schemas/AgentRegistration"
+components:
+  securitySchemes:
+    SanctumCookie:
+      type: apiKey
+      in: cookie
+      name: idelium_session
+    IdeliumKey:
+      type: apiKey
+      in: header
+      name: Idelium-Key
+  parameters:
+    ProjectId:
+      name: idProject
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    AssetType:
+      name: assetType
+      in: path
+      required: true
+      schema:
+        type: string
+        enum: [environment, plugin, step, test, test_cycle]
+    AssetId:
+      name: assetId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    AssetVersionId:
+      name: assetVersion
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    RunCommitFilter:
+      name: commit
+      in: query
+      schema:
+        type: string
+    RunBranchFilter:
+      name: branch
+      in: query
+      schema:
+        type: string
+    RunPipelineFilter:
+      name: pipeline
+      in: query
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: Validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+  schemas:
+    ValidationErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+    ParallelRunCreateRequest:
+      type: object
+      required: [testCycleId, idempotencyKey]
+      properties:
+        testCycleId:
+          type: integer
+          minimum: 1
+        idempotencyKey:
+          type: string
+          maxLength: 128
+        requestedConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 32
+        metadata:
+          type: object
+          additionalProperties: true
+    MatrixRunCreateRequest:
+      allOf:
+        - $ref: "#/components/schemas/ParallelRunCreateRequest"
+        - type: object
+          required: [matrix]
+          properties:
+            matrix:
+              type: object
+              properties:
+                platforms:
+                  type: array
+                  maxItems: 16
+                  items: {type: string}
+                browsers:
+                  type: array
+                  maxItems: 16
+                  items: {type: string}
+                devices:
+                  type: array
+                  maxItems: 16
+                  items: {type: string}
+                environments:
+                  type: array
+                  maxItems: 16
+                  items: {type: string}
+    MatrixRunCreateResponse:
+      type: object
+      required: [data, summary]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ParallelRun"
+        summary:
+          type: object
+          required: [requestedRuns, scheduledRuns]
+          properties:
+            requestedRuns: {type: integer}
+            scheduledRuns: {type: integer}
+    ParallelRun:
+      type: object
+      required: [id, runUrl, idProject, testCycleId, idempotencyKey, status]
+      properties:
+        id: {type: integer}
+        runUrl: {type: string}
+        idProject: {type: integer}
+        testCycleId: {type: integer}
+        idempotencyKey: {type: string}
+        status:
+          type: string
+          enum: [queued, running, cancelling, cancelled, completed, failed, lost]
+        metadata:
+          type: object
+          additionalProperties: true
+    AssetImpact:
+      type: object
+      required: [asset, summary, tests, testCycles]
+      properties:
+        asset:
+          type: object
+          additionalProperties: true
+        summary:
+          type: object
+          additionalProperties: {type: integer}
+        tests:
+          type: array
+          items:
+            $ref: "#/components/schemas/NamedResource"
+        testCycles:
+          type: array
+          items:
+            $ref: "#/components/schemas/NamedResource"
+    NamedResource:
+      type: object
+      required: [id, name, description]
+      properties:
+        id: {type: integer}
+        name: {type: string}
+        description: {type: string}
+    AssetVersionSummary:
+      type: object
+      required: [id, idProject, assetType, assetId, version, reason, review]
+      properties:
+        id: {type: integer}
+        idProject: {type: integer}
+        assetType: {type: string}
+        assetId: {type: integer}
+        version: {type: integer}
+        reason: {type: string}
+        review:
+          $ref: "#/components/schemas/AssetVersionReview"
+    AssetVersionReview:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [draft, in_review, approved, deprecated]
+    AssetVersionReviewTransitionRequest:
+      type: object
+      required: [toStatus]
+      properties:
+        toStatus:
+          type: string
+          enum: [in_review, approved, deprecated]
+        comment:
+          type: string
+          maxLength: 2000
+          nullable: true
+    AssetVersionReviewEvent:
+      type: object
+      required: [id, assetVersionId, fromStatus, toStatus]
+      properties:
+        id: {type: integer}
+        assetVersionId: {type: integer}
+        fromStatus: {type: string}
+        toStatus: {type: string}
+        comment:
+          type: string
+          nullable: true
+    AgentStatus:
+      type: string
+      enum: [pending, approved, maintenance, draining, disabled]
+    AgentHealth:
+      type: string
+      enum: [unknown, healthy, unhealthy]
+    AgentRegisterRequest:
+      type: object
+      required: [agentId]
+      properties:
+        agentId:
+          type: string
+          maxLength: 128
+        version:
+          type: string
+          maxLength: 64
+        runtimes:
+          type: array
+          items: {type: string}
+        capabilities:
+          type: object
+          additionalProperties: true
+        maxConcurrency:
+          type: integer
+          minimum: 1
+          maximum: 256
+        health:
+          $ref: "#/components/schemas/AgentHealth"
+    AgentRegistration:
+      type: object
+      required: [id, agentId, status, runtimes, capabilities, maxConcurrency, health]
+      properties:
+        id: {type: integer}
+        agentId: {type: string}
+        status:
+          $ref: "#/components/schemas/AgentStatus"
+        version:
+          type: string
+          nullable: true
+        runtimes:
+          type: array
+          items: {type: string}
+        capabilities:
+          type: object
+          additionalProperties: true
+        maxConcurrency: {type: integer}
+        health:
+          $ref: "#/components/schemas/AgentHealth"
