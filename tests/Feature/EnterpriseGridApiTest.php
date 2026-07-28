@@ -18,6 +18,66 @@ class EnterpriseGridApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_projects_grid_preserves_legacy_array_response_without_grid_parameters(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $user] = $this->createTenant('first');
+        $this->createProjectFor($user->idCostumer, 'Checkout', 'Checkout project');
+        $this->createProjectFor($user->idCostumer, 'Login', 'Login project');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/projects')
+            ->assertOk()
+            ->assertJsonCount(3)
+            ->assertJsonPath('0.name', 'FIRST')
+            ->assertJsonMissingPath('meta');
+    }
+
+    public function test_projects_grid_supports_server_side_search_filter_sort_and_pagination(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $user] = $this->createTenant('first');
+        $checkout = $this->createProjectFor(
+            $user->idCostumer,
+            'Checkout',
+            'Browser checkout'
+        );
+        $this->createProjectFor($user->idCostumer, 'Login', 'Browser login');
+        $this->createProjectFor($user->idCostumer, 'Postman', 'API regression');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/projects?page=1&pageSize=1&search=browser&sort=name&direction=asc&filter[id]='.$checkout->id
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $checkout->id)
+            ->assertJsonPath('data.0.name', 'Checkout')
+            ->assertJsonPath('meta.page', 1)
+            ->assertJsonPath('meta.pageSize', 1)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.sort', 'name')
+            ->assertJsonPath('meta.direction', 'asc')
+            ->assertJsonPath('meta.hasPreviousPage', false)
+            ->assertJsonPath('meta.hasNextPage', false);
+    }
+
+    public function test_projects_grid_remains_tenant_scoped_when_requested_as_grid(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $firstUser] = $this->createTenant('first');
+        [$secondCustomer] = $this->createTenant('second');
+        $this->createProjectFor($secondCustomer->id, 'Protected', 'Protected project');
+
+        Sanctum::actingAs($firstUser);
+
+        $this->getJson('/api/admin/projects?page=1&pageSize=10')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'FIRST')
+            ->assertJsonPath('meta.total', 1);
+    }
+
     public function test_steps_grid_preserves_legacy_array_response_without_grid_parameters(): void
     {
         Role::forceCreate(['id' => 3, 'name' => 'user']);
@@ -258,6 +318,18 @@ class EnterpriseGridApiTest extends TestCase
             'config' => json_encode([]),
             'idProject' => $project->id,
             'idCostumer' => $customer->id,
+        ]);
+    }
+
+    private function createProjectFor(
+        int $customerId,
+        string $name,
+        string $description
+    ): Project {
+        return Project::forceCreate([
+            'name' => $name,
+            'description' => $description,
+            'idCostumer' => $customerId,
         ]);
     }
 }

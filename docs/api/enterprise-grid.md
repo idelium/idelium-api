@@ -45,6 +45,28 @@ loading, stale, partial, empty, and error states.
 
 ## Supported endpoints
 
+### Projects
+
+`GET /api/admin/projects` supports the enterprise grid contract.
+
+Allowed search columns:
+
+- `name`
+- `description`
+
+Allowed sort columns:
+
+- `id`
+- `name`
+- `description`
+- `created_at`
+- `updated_at`
+
+Allowed filters:
+
+- `id`
+- `name`
+
 ### Steps
 
 `GET /api/admin/steps/{idProject}` supports the enterprise grid contract.

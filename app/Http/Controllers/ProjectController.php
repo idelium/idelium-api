@@ -14,6 +14,7 @@ use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
 use App\Services\TenantResourceService;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -23,10 +24,18 @@ class ProjectController extends Controller
 
     public function index(Request $request)
     {
-        return Project::select('id', 'name', 'description')
-            ->where('idCostumer', $request->user()->idCostumer)
-            ->orderBy('created_at', 'asc')
-            ->get();
+        $query = Project::select('id', 'name', 'description')
+            ->where('idCostumer', $request->user()->idCostumer);
+
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            ['id', 'name', 'description', 'created_at', 'updated_at'],
+            'created_at',
+            'asc',
+            ['name', 'description'],
+            ['id', 'name'],
+        );
     }
 
     public function store(StoreProjectRequest $request)
