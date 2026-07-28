@@ -4,6 +4,7 @@ namespace App\Http;
 
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\AuthenticateIdeliumKey;
+use App\Http\Middleware\CorrelateRequests;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\RedirectIfAuthenticated;
@@ -65,6 +66,7 @@ class Kernel extends HttpKernel
             SubstituteBindings::class,
         ],
         'api' => [
+            CorrelateRequests::class,
             EnsureFrontendRequestsAreStateful::class,
             'throttle:api',
             SubstituteBindings::class,
@@ -89,6 +91,7 @@ class Kernel extends HttpKernel
         'auth.basic' => AuthenticateWithBasicAuth::class,
         'cache.headers' => SetCacheHeaders::class,
         'can' => Authorize::class,
+        'correlate' => CorrelateRequests::class,
         'guest' => RedirectIfAuthenticated::class,
         'idelium.key' => AuthenticateIdeliumKey::class,
         'tenant.context' => ResolveTenantContext::class,

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
+use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
 use App\Http\Controllers\HeaderController;
@@ -49,6 +50,9 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('header.index');
     Route::put('menu/header/{idCostumer}', [HeaderController::class, 'changeCostumer'])
         ->name('header.changeCostumer');
+    /* audit */
+    Route::get('audit-events', [AuditEventController::class, 'index'])
+        ->name('audit-events.index');
     /* roles */
     Route::get('admin/roles', [RoleController::class, 'index'])
         ->name('roles.index');

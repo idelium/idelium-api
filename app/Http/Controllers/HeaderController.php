@@ -5,10 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Costumer;
 use App\Models\Project;
+use App\Services\AuditEventService;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\Request;
 
 class HeaderController extends Controller
 {
+    public function __construct(private readonly AuditEventService $auditEvents) {}
+
     public function index(Request $request)
     {
         $header = [];
@@ -66,6 +70,24 @@ class HeaderController extends Controller
         $request->session()->put(
             ResolveTenantContext::SESSION_ACTIVE_TENANT,
             $targetTenantId
+        );
+        $request->attributes->set(
+            ResolveTenantContext::ATTRIBUTE,
+            TenantContext::forUser($user, $targetTenantId)
+        );
+
+        $this->auditEvents->record(
+            $request,
+            'tenant.switch',
+            'costumer',
+            (string) $targetTenantId,
+            beforeValues: [
+                'activeTenantId' => (int) $user->getOriginal('idCostumer'),
+            ],
+            afterValues: [
+                'activeTenantId' => $targetTenantId,
+                'sessionToken' => $request->session()->getId(),
+            ],
         );
 
         return response()->json([
