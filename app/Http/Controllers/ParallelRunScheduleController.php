@@ -21,6 +21,8 @@ class ParallelRunScheduleController extends Controller
 {
     private const MAX_CONCURRENCY = 32;
 
+    private const MAX_MATRIX_RUNS = 64;
+
     private const DEFAULT_WORKER_LEASE_SECONDS = 120;
 
     private const TERMINAL_STATUSES = [
@@ -101,6 +103,106 @@ class ParallelRunScheduleController extends Controller
         });
 
         return response()->json($this->scheduleResponse($schedule), 201);
+    }
+
+    public function storeMatrix(Request $request, int $idProject): JsonResponse
+    {
+        $customer = $this->customerFromRequest($request);
+
+        $validated = $request->validate([
+            'testCycleId' => ['required', 'integer'],
+            'idempotencyKey' => ['required', 'string', 'max:96'],
+            'requestedConcurrency' => [
+                'sometimes',
+                'integer',
+                'min:1',
+                'max:'.self::MAX_CONCURRENCY,
+            ],
+            'metadata' => ['sometimes', 'array'],
+            'matrix' => ['present', 'array'],
+            'matrix.platforms' => ['sometimes', 'array', 'max:16'],
+            'matrix.browsers' => ['sometimes', 'array', 'max:16'],
+            'matrix.devices' => ['sometimes', 'array', 'max:16'],
+            'matrix.environments' => ['sometimes', 'array', 'max:16'],
+        ]);
+        $matrix = $request->input('matrix', []);
+        $combinations = $this->matrixCombinations(is_array($matrix) ? $matrix : []);
+
+        if ($combinations === []) {
+            abort(response()->json([
+                'message' => 'At least one matrix axis value is required.',
+            ], 422));
+        }
+
+        if (count($combinations) > self::MAX_MATRIX_RUNS) {
+            abort(response()->json([
+                'message' => 'Matrix launch exceeds the maximum number of generated runs.',
+                'maximumRuns' => self::MAX_MATRIX_RUNS,
+                'requestedRuns' => count($combinations),
+            ], 422));
+        }
+
+        $schedules = DB::transaction(function () use (
+            $customer,
+            $idProject,
+            $validated,
+            $combinations
+        ) {
+            $this->ownedProject($customer, $idProject, true);
+            $testCycle = $this->ownedTestCycle(
+                $customer,
+                $idProject,
+                (int) $validated['testCycleId'],
+                true
+            );
+            $totalCombinations = count($combinations);
+
+            return collect($combinations)
+                ->map(function (array $combination, int $index) use (
+                    $customer,
+                    $idProject,
+                    $validated,
+                    $testCycle,
+                    $totalCombinations
+                ) {
+                    $metadata = $this->runMetadata->normalize($validated['metadata'] ?? []);
+                    $metadata['matrix'] = [
+                        'index' => $index,
+                        'total' => $totalCombinations,
+                        'combination' => $combination,
+                    ];
+                    $metadata['executionSnapshot'] = $this->assetVersions
+                        ->executionSnapshotForTestCycle($testCycle);
+
+                    return ParallelRunSchedule::firstOrCreate([
+                        'idCostumer' => $customer->id,
+                        'idProject' => $idProject,
+                        'idempotencyKey' => $this->matrixIdempotencyKey(
+                            $validated['idempotencyKey'],
+                            $combination
+                        ),
+                    ], [
+                        'testCycleId' => (int) $validated['testCycleId'],
+                        'requestedConcurrency' => (int) ($validated['requestedConcurrency'] ?? 1),
+                        'status' => ParallelRunSchedule::STATUS_QUEUED,
+                        'workerStates' => [],
+                        'resultSummary' => [],
+                        'metadata' => $metadata,
+                        'scheduledAt' => now(),
+                    ]);
+                })
+                ->values();
+        });
+
+        return response()->json([
+            'data' => $schedules
+                ->map(fn (ParallelRunSchedule $schedule) => $this->scheduleResponse($schedule))
+                ->values(),
+            'summary' => [
+                'requestedRuns' => count($combinations),
+                'scheduledRuns' => $schedules->count(),
+            ],
+        ], 201);
     }
 
     public function show(Request $request, int $idProject, int $parallelRun): JsonResponse
@@ -653,6 +755,7 @@ class ParallelRunScheduleController extends Controller
     {
         return [
             'id' => $schedule->id,
+            'runUrl' => '/api/admin/projects/'.$schedule->idProject.'/parallel-runs/'.$schedule->id,
             'idProject' => $schedule->idProject,
             'testCycleId' => $schedule->testCycleId,
             'performedTestCycleId' => $schedule->performedTestCycleId,
@@ -684,6 +787,59 @@ class ParallelRunScheduleController extends Controller
         ksort($workers);
 
         return array_values($workers);
+    }
+
+    /**
+     * @param array<string, mixed> $matrix
+     * @return array<int, array<string, string>>
+     */
+    private function matrixCombinations(array $matrix): array
+    {
+        $axes = [];
+        foreach ([
+            'platforms' => 'platform',
+            'browsers' => 'browser',
+            'devices' => 'device',
+            'environments' => 'environment',
+        ] as $inputKey => $outputKey) {
+            $values = collect($matrix[$inputKey] ?? [])
+                ->filter(fn ($value) => is_scalar($value) && (string) $value !== '')
+                ->map(fn ($value) => (string) $value)
+                ->unique()
+                ->values()
+                ->all();
+
+            if ($values !== []) {
+                $axes[$outputKey] = $values;
+            }
+        }
+
+        if ($axes === []) {
+            return [];
+        }
+
+        $combinations = [[]];
+        foreach ($axes as $axis => $values) {
+            $next = [];
+            foreach ($combinations as $combination) {
+                foreach ($values as $value) {
+                    $next[] = array_merge($combination, [$axis => $value]);
+                }
+            }
+            $combinations = $next;
+        }
+
+        return $combinations;
+    }
+
+    /**
+     * @param array<string, string> $combination
+     */
+    private function matrixIdempotencyKey(string $baseKey, array $combination): string
+    {
+        ksort($combination);
+
+        return $baseKey.'-'.substr(hash('sha256', json_encode($combination)), 0, 16);
     }
 
     private function markExpiredWorkerLeases(ParallelRunSchedule $schedule): void

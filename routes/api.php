@@ -131,6 +131,8 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     /* parallel runs */
     Route::get('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
         ->name('parallelruns.index');
+    Route::post('admin/projects/{idProject}/parallel-runs/matrix', [ParallelRunScheduleController::class, 'storeMatrix'])
+        ->name('parallelruns.storeMatrix');
     Route::post('admin/projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
         ->name('parallelruns.store');
     Route::get('admin/projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])
@@ -302,6 +304,8 @@ Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
         ->name('cl.agents.register');
     Route::get('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'index'])
         ->name('cl.parallelruns.index');
+    Route::post('projects/{idProject}/parallel-runs/matrix', [ParallelRunScheduleController::class, 'storeMatrix'])
+        ->name('cl.parallelruns.storeMatrix');
     Route::post('projects/{idProject}/parallel-runs', [ParallelRunScheduleController::class, 'store'])
         ->name('cl.parallelruns.store');
     Route::get('projects/{idProject}/parallel-runs/{parallelRun}', [ParallelRunScheduleController::class, 'show'])

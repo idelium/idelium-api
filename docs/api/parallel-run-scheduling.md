@@ -14,6 +14,7 @@ existence is not leaked.
 ## Web routes
 
 - `POST /api/admin/projects/{idProject}/parallel-runs`
+- `POST /api/admin/projects/{idProject}/parallel-runs/matrix`
 - `GET /api/admin/projects/{idProject}/parallel-runs`
 - `GET /api/admin/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/claim`
@@ -25,6 +26,7 @@ existence is not leaked.
 ## CLI routes
 
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs`
+- `POST /api/ideliumcl/projects/{idProject}/parallel-runs/matrix`
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs`
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/claim`
@@ -50,6 +52,32 @@ existence is not leaked.
 `requestedConcurrency` is bounded to `1..32`. The idempotency key is unique for
 the authenticated customer and project, so retrying the same schedule request
 returns the existing run instead of creating duplicates.
+
+## Matrix scheduling payload
+
+Matrix scheduling expands validated platform, browser, device, and environment
+axes into deterministic parallel-run schedules:
+
+```json
+{
+  "testCycleId": 42,
+  "idempotencyKey": "release-2026-07-27-main",
+  "requestedConcurrency": 2,
+  "matrix": {
+    "platforms": ["linux"],
+    "browsers": ["chrome", "firefox"],
+    "environments": ["demo", "prod"]
+  },
+  "metadata": {
+    "pipeline": "release"
+  }
+}
+```
+
+The API creates one schedule for each combination, up to 64 generated runs per
+request. Each generated run receives an idempotency key derived from the client
+key and the matrix combination. Retrying the same request returns the same
+durable run identities and `runUrl` values.
 
 ## Run metadata
 

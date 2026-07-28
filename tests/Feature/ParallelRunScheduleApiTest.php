@@ -192,6 +192,79 @@ class ParallelRunScheduleApiTest extends TestCase
         ]);
     }
 
+    public function test_matrix_launch_creates_deterministic_parallel_run_schedules(): void
+    {
+        Sanctum::actingAs($this->createUser($this->firstCustomer));
+
+        $payload = [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'matrix-release',
+            'requestedConcurrency' => 2,
+            'matrix' => [
+                'platforms' => ['linux'],
+                'browsers' => ['chrome', 'firefox'],
+                'environments' => ['demo', 'prod'],
+            ],
+            'metadata' => [
+                'pipeline' => 'release',
+            ],
+        ];
+
+        $first = $this->postJson(
+            '/api/admin/projects/'.$this->firstProject->id.'/parallel-runs/matrix',
+            $payload
+        )->assertCreated()
+            ->assertJsonPath('summary.requestedRuns', 4)
+            ->assertJsonPath('summary.scheduledRuns', 4)
+            ->assertJsonCount(4, 'data')
+            ->assertJsonPath('data.0.metadata.matrix.index', 0)
+            ->assertJsonPath('data.0.metadata.matrix.total', 4)
+            ->assertJsonPath('data.0.metadata.matrix.combination.platform', 'linux')
+            ->assertJsonPath('data.0.metadata.run.pipeline', 'release')
+            ->assertJsonPath('data.0.requestedConcurrency', 2);
+
+        $this->assertStringContainsString(
+            '/api/admin/projects/'.$this->firstProject->id.'/parallel-runs/',
+            $first->json('data.0.runUrl')
+        );
+        $this->assertDatabaseCount('parallel_run_schedules', 4);
+
+        $second = $this->postJson(
+            '/api/admin/projects/'.$this->firstProject->id.'/parallel-runs/matrix',
+            $payload
+        )->assertCreated()
+            ->assertJsonCount(4, 'data');
+
+        $this->assertSame($first->json('data.0.id'), $second->json('data.0.id'));
+        $this->assertDatabaseCount('parallel_run_schedules', 4);
+    }
+
+    public function test_matrix_launch_rejects_empty_or_too_large_matrices(): void
+    {
+        Sanctum::actingAs($this->createUser($this->firstCustomer));
+
+        $this->postJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs/matrix', [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'empty-matrix',
+            'matrix' => [],
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'At least one matrix axis value is required.');
+
+        $this->postJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs/matrix', [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'large-matrix',
+            'matrix' => [
+                'platforms' => range(1, 8),
+                'browsers' => range(1, 9),
+            ],
+        ])->assertStatus(422)
+            ->assertJsonPath('message', 'Matrix launch exceeds the maximum number of generated runs.')
+            ->assertJsonPath('maximumRuns', 64)
+            ->assertJsonPath('requestedRuns', 72);
+
+        $this->assertDatabaseCount('parallel_run_schedules', 0);
+    }
+
     public function test_sanctum_user_cannot_schedule_for_another_customer_project_or_cycle(): void
     {
         Sanctum::actingAs($this->createUser($this->firstCustomer));
