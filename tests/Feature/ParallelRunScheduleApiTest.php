@@ -296,6 +296,85 @@ class ParallelRunScheduleApiTest extends TestCase
             ->assertJsonPath('cancelledWorkers', 1);
     }
 
+    public function test_worker_heartbeat_renews_finite_lease(): void
+    {
+        $schedule = $this->createSchedule($this->firstCustomer, $this->firstProject, $this->firstCycle);
+
+        $this->withHeader('Idelium-Key', $this->firstCustomer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->firstProject->id.'/parallel-runs/'.$schedule->id.'/claim',
+                ['workerId' => 'worker-a']
+            )->assertOk();
+
+        $this->withHeader('Idelium-Key', $this->firstCustomer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->firstProject->id.'/parallel-runs/'.$schedule->id
+                .'/workers/worker-a/heartbeat',
+                ['leaseSeconds' => 300]
+            )->assertOk()
+            ->assertJsonPath('status', ParallelRunSchedule::STATUS_RUNNING)
+            ->assertJsonPath('activeWorkers', 1)
+            ->assertJsonPath('lostWorkers', 0);
+
+        $schedule->refresh();
+        $worker = $schedule->workerStates['worker-a'];
+        $this->assertSame(ParallelRunSchedule::WORKER_RUNNING, $worker['status']);
+        $this->assertArrayHasKey('lastHeartbeatAt', $worker);
+        $this->assertArrayHasKey('leaseExpiresAt', $worker);
+    }
+
+    public function test_expired_worker_lease_is_marked_lost(): void
+    {
+        $schedule = $this->createSchedule($this->firstCustomer, $this->firstProject, $this->firstCycle);
+        $schedule->workerStates = [
+            'worker-a' => [
+                'workerId' => 'worker-a',
+                'status' => ParallelRunSchedule::WORKER_RUNNING,
+                'claimedAt' => now()->subMinutes(10)->toISOString(),
+                'lastHeartbeatAt' => now()->subMinutes(10)->toISOString(),
+                'leaseExpiresAt' => now()->subMinutes(5)->toISOString(),
+                'updatedAt' => now()->subMinutes(10)->toISOString(),
+                'result' => null,
+            ],
+        ];
+        $schedule->status = ParallelRunSchedule::STATUS_RUNNING;
+        $schedule->activeWorkers = 1;
+        $schedule->totalWorkers = 1;
+        $schedule->save();
+
+        $this->withHeader('Idelium-Key', $this->firstCustomer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->firstProject->id.'/parallel-runs/'.$schedule->id
+                .'/workers/worker-a/heartbeat',
+                ['leaseSeconds' => 120]
+            )->assertStatus(409)
+            ->assertJsonPath('message', 'Worker lease is no longer active.')
+            ->assertJsonPath('workerStatus', ParallelRunSchedule::WORKER_LOST)
+            ->assertJsonPath('status', ParallelRunSchedule::STATUS_LOST)
+            ->assertJsonPath('aggregateStatus', ParallelRunSchedule::RESULT_LOST)
+            ->assertJsonPath('activeWorkers', 0)
+            ->assertJsonPath('lostWorkers', 1);
+
+        $schedule->refresh();
+        $this->assertSame(
+            ParallelRunSchedule::WORKER_LOST,
+            $schedule->workerStates['worker-a']['status']
+        );
+        $this->assertSame(ParallelRunSchedule::STATUS_LOST, $schedule->status);
+    }
+
+    public function test_cli_key_cannot_heartbeat_foreign_parallel_run(): void
+    {
+        $schedule = $this->createSchedule($this->secondCustomer, $this->secondProject, $this->secondCycle);
+
+        $this->withHeader('Idelium-Key', $this->firstCustomer->apiKey)
+            ->postJson(
+                '/api/ideliumcl/projects/'.$this->secondProject->id.'/parallel-runs/'.$schedule->id
+                .'/workers/worker-a/heartbeat',
+                ['leaseSeconds' => 120]
+            )->assertNotFound();
+    }
+
     private function createCustomer(string $apiKey, string $name): Costumer
     {
         return Costumer::forceCreate([

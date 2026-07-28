@@ -21,6 +21,8 @@ class ParallelRunSchedule extends Model
 
     public const STATUS_FAILED = 'failed';
 
+    public const STATUS_LOST = 'lost';
+
     public const WORKER_RUNNING = 'running';
 
     public const WORKER_COMPLETED = 'completed';
@@ -29,11 +31,15 @@ class ParallelRunSchedule extends Model
 
     public const WORKER_CANCELLED = 'cancelled';
 
+    public const WORKER_LOST = 'lost';
+
     public const RESULT_PASSED = 1;
 
     public const RESULT_FAILED = 2;
 
     public const RESULT_CANCELLED = 3;
+
+    public const RESULT_LOST = 4;
 
     protected $casts = [
         'metadata' => 'array',

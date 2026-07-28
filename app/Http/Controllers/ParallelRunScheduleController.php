@@ -19,10 +19,13 @@ class ParallelRunScheduleController extends Controller
 {
     private const MAX_CONCURRENCY = 32;
 
+    private const DEFAULT_WORKER_LEASE_SECONDS = 120;
+
     private const TERMINAL_STATUSES = [
         ParallelRunSchedule::STATUS_CANCELLED,
         ParallelRunSchedule::STATUS_COMPLETED,
         ParallelRunSchedule::STATUS_FAILED,
+        ParallelRunSchedule::STATUS_LOST,
     ];
 
     public function __construct(
@@ -159,6 +162,8 @@ class ParallelRunScheduleController extends Controller
                 'status' => ParallelRunSchedule::WORKER_RUNNING,
                 'capabilities' => $validated['capabilities'] ?? ($existing['capabilities'] ?? []),
                 'claimedAt' => $existing['claimedAt'] ?? $now->toISOString(),
+                'lastHeartbeatAt' => $now->toISOString(),
+                'leaseExpiresAt' => $now->copy()->addSeconds(self::DEFAULT_WORKER_LEASE_SECONDS)->toISOString(),
                 'updatedAt' => $now->toISOString(),
                 'result' => $existing['result'] ?? null,
             ];
@@ -173,6 +178,80 @@ class ParallelRunScheduleController extends Controller
         });
 
         return response()->json($this->scheduleResponse($schedule));
+    }
+
+    public function heartbeatWorker(
+        Request $request,
+        int $idProject,
+        int $parallelRun,
+        string $workerId
+    ): JsonResponse {
+        $customer = $this->customerFromRequest($request);
+        $validated = $request->validate([
+            'leaseSeconds' => ['sometimes', 'integer', 'min:15', 'max:3600'],
+        ]);
+
+        $heartbeat = DB::transaction(function () use (
+            $customer,
+            $idProject,
+            $parallelRun,
+            $workerId,
+            $validated
+        ) {
+            $schedule = $this->ownedSchedule($customer, $idProject, $parallelRun, true);
+            $this->markExpiredWorkerLeases($schedule);
+
+            if (in_array($schedule->status, self::TERMINAL_STATUSES, true)) {
+                abort(response()->json([
+                    'message' => 'Parallel run is already terminal.',
+                ], 422));
+            }
+
+            $workers = $schedule->workerStates ?? [];
+
+            if (! array_key_exists($workerId, $workers)) {
+                abort(response()->json([
+                    'message' => 'Worker has not claimed this run.',
+                ], 404));
+            }
+
+            if (($workers[$workerId]['status'] ?? null) !== ParallelRunSchedule::WORKER_RUNNING) {
+                $schedule->workerStates = $workers;
+                $this->recalculateWorkers($schedule);
+                $schedule->save();
+
+                return [
+                    'schedule' => $schedule,
+                    'status' => 409,
+                    'message' => 'Worker lease is no longer active.',
+                    'workerStatus' => $workers[$workerId]['status'] ?? null,
+                ];
+            }
+
+            $now = now();
+            $workers[$workerId]['lastHeartbeatAt'] = $now->toISOString();
+            $workers[$workerId]['leaseExpiresAt'] = $now
+                ->copy()
+                ->addSeconds((int) ($validated['leaseSeconds'] ?? self::DEFAULT_WORKER_LEASE_SECONDS))
+                ->toISOString();
+            $workers[$workerId]['updatedAt'] = $now->toISOString();
+            $schedule->workerStates = $workers;
+            $this->recalculateWorkers($schedule);
+            $schedule->save();
+
+            return [
+                'schedule' => $schedule,
+                'status' => 200,
+            ];
+        });
+
+        $payload = $this->scheduleResponse($heartbeat['schedule']);
+        if (($heartbeat['status'] ?? 200) !== 200) {
+            $payload['message'] = $heartbeat['message'];
+            $payload['workerStatus'] = $heartbeat['workerStatus'];
+        }
+
+        return response()->json($payload, $heartbeat['status'] ?? 200);
     }
 
     public function issueRunToken(
@@ -224,6 +303,7 @@ class ParallelRunScheduleController extends Controller
                     ParallelRunSchedule::WORKER_COMPLETED,
                     ParallelRunSchedule::WORKER_FAILED,
                     ParallelRunSchedule::WORKER_CANCELLED,
+                    ParallelRunSchedule::WORKER_LOST,
                 ]),
             ],
             'result' => ['sometimes', 'array'],
@@ -443,12 +523,15 @@ class ParallelRunScheduleController extends Controller
     private function recalculateWorkers(ParallelRunSchedule $schedule): void
     {
         $workers = $schedule->workerStates ?? [];
+        $this->markExpiredWorkerLeases($schedule);
+        $workers = $schedule->workerStates ?? [];
         ksort($workers);
 
         $active = 0;
         $completed = 0;
         $failed = 0;
         $cancelled = 0;
+        $lost = 0;
         $summary = [];
 
         foreach ($workers as $workerId => $worker) {
@@ -461,6 +544,8 @@ class ParallelRunScheduleController extends Controller
                 $failed++;
             } elseif ($status === ParallelRunSchedule::WORKER_CANCELLED) {
                 $cancelled++;
+            } elseif ($status === ParallelRunSchedule::WORKER_LOST) {
+                $lost++;
             }
 
             $summary[] = [
@@ -487,6 +572,13 @@ class ParallelRunScheduleController extends Controller
         if ($failed > 0) {
             $schedule->status = ParallelRunSchedule::STATUS_FAILED;
             $schedule->aggregateStatus = ParallelRunSchedule::RESULT_FAILED;
+
+            return;
+        }
+
+        if ($lost > 0) {
+            $schedule->status = ParallelRunSchedule::STATUS_LOST;
+            $schedule->aggregateStatus = ParallelRunSchedule::RESULT_LOST;
 
             return;
         }
@@ -523,6 +615,10 @@ class ParallelRunScheduleController extends Controller
             'completedWorkers' => $schedule->completedWorkers,
             'failedWorkers' => $schedule->failedWorkers,
             'cancelledWorkers' => $schedule->cancelledWorkers,
+            'lostWorkers' => $this->countWorkersByStatus(
+                $schedule,
+                ParallelRunSchedule::WORKER_LOST
+            ),
             'aggregateStatus' => $schedule->aggregateStatus,
             'metadata' => $schedule->metadata ?? [],
             'resultSummary' => $schedule->resultSummary ?? [],
@@ -539,5 +635,41 @@ class ParallelRunScheduleController extends Controller
         ksort($workers);
 
         return array_values($workers);
+    }
+
+    private function markExpiredWorkerLeases(ParallelRunSchedule $schedule): void
+    {
+        $workers = $schedule->workerStates ?? [];
+        $changed = false;
+        $now = now();
+
+        foreach ($workers as $workerId => $worker) {
+            if (($worker['status'] ?? null) !== ParallelRunSchedule::WORKER_RUNNING) {
+                continue;
+            }
+
+            $leaseExpiresAt = $worker['leaseExpiresAt'] ?? null;
+            if (! is_string($leaseExpiresAt) || $leaseExpiresAt === '') {
+                continue;
+            }
+
+            if ($now->greaterThan(\Carbon\Carbon::parse($leaseExpiresAt))) {
+                $workers[$workerId]['status'] = ParallelRunSchedule::WORKER_LOST;
+                $workers[$workerId]['lostAt'] = $now->toISOString();
+                $workers[$workerId]['updatedAt'] = $now->toISOString();
+                $changed = true;
+            }
+        }
+
+        if ($changed) {
+            $schedule->workerStates = $workers;
+        }
+    }
+
+    private function countWorkersByStatus(ParallelRunSchedule $schedule, string $status): int
+    {
+        return collect($schedule->workerStates ?? [])
+            ->filter(fn (array $worker) => ($worker['status'] ?? null) === $status)
+            ->count();
     }
 }

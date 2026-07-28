@@ -17,6 +17,7 @@ existence is not leaked.
 - `GET /api/admin/projects/{idProject}/parallel-runs`
 - `GET /api/admin/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/claim`
+- `POST /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}/heartbeat`
 - `PUT /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}`
 - `POST /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/cancel`
 - `GET /api/admin/projects/{idProject}/parallel-runs/{parallelRun}/results`
@@ -27,6 +28,7 @@ existence is not leaked.
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs`
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}`
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/claim`
+- `POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}/heartbeat`
 - `PUT /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/workers/{workerId}`
 - `POST /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/cancel`
 - `GET /api/ideliumcl/projects/{idProject}/parallel-runs/{parallelRun}/results`
@@ -55,6 +57,18 @@ Workers claim capacity with `POST .../claim` and a stable `workerId`. The API
 returns `409` when the requested concurrency is already consumed and `422` when
 the run is terminal.
 
+Claimed workers receive a finite lease. The default lease is 120 seconds. Runners
+can renew it with:
+
+```json
+{
+  "leaseSeconds": 120
+}
+```
+
+When a running worker misses its lease, the API deterministically marks that
+worker as `lost`. Lost workers are no longer active owners for the run.
+
 Workers update their status with:
 
 ```json
@@ -68,12 +82,13 @@ Workers update their status with:
 }
 ```
 
-Allowed worker statuses are `running`, `completed`, `failed`, and `cancelled`.
-Terminal run states reject further claims or updates.
+Allowed worker statuses are `running`, `completed`, `failed`, `cancelled`, and
+`lost`. Terminal run states reject further claims or updates.
 
 ## Aggregation
 
 The result endpoint returns deterministic worker ordering by `workerId`. Failed
 workers make the aggregate status failed, cancelled-only runs are cancelled, and
-all-completed runs are passed. Responses expose only explicit contract fields and
+lost workers make the aggregate status lost when there are no failed workers.
+All-completed runs are passed. Responses expose only explicit contract fields and
 never serialize customer internals.
