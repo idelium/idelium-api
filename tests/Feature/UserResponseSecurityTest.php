@@ -102,6 +102,7 @@ class UserResponseSecurityTest extends TestCase
             ->assertExactJson($expectedProfile);
 
         $this->putJson('/api/admin/profile', [
+            'currentPassword' => 'SensitivePassword123!',
             'password' => 'UpdatedPassword123!',
         ])->assertOk()->assertExactJson($expectedProfile);
     }

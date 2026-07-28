@@ -3,12 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\PasswordPolicy;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -51,6 +54,7 @@ class UserController extends Controller
                 'exists:costumers,id',
             ],
         ]);
+        $this->validatePasswordPolicy($validated['password']);
 
         $user = new User;
         $user->name = $validated['name'];
@@ -82,12 +86,25 @@ class UserController extends Controller
 
     public function updatePasswordUser(Request $request)
     {
-        $this->validate($request, [
+        $validated = $this->validate($request, [
+            'currentPassword' => 'required_without:current_password|string',
+            'current_password' => 'required_without:currentPassword|string',
             'password' => 'required',
         ]);
 
         $user = User::findorFail(Auth::user()->id);
-        $user->password = bcrypt($request->input('password'));
+        $currentPassword = $validated['currentPassword']
+            ?? $validated['current_password']
+            ?? '';
+
+        if (! Hash::check($currentPassword, $user->password)) {
+            throw ValidationException::withMessages([
+                'currentPassword' => ['The current password is not valid.'],
+            ]);
+        }
+
+        $this->validatePasswordPolicy($validated['password']);
+        $user->password = bcrypt($validated['password']);
         $user->save();
 
         return $this->getuser($request);
@@ -104,6 +121,7 @@ class UserController extends Controller
             'name' => 'required',
             'password' => 'required|string|min:8',
         ]);
+        $this->validatePasswordPolicy($validated['password']);
 
         $user = $this->accountForMutation($authenticatedUser, $id);
         Gate::authorize('update', $user);
@@ -154,5 +172,15 @@ class UserController extends Controller
         }
 
         return $query->firstOrFail();
+    }
+
+    private function validatePasswordPolicy(string $password): void
+    {
+        $violations = app(PasswordPolicy::class)->violations($password);
+        if ($violations !== []) {
+            throw ValidationException::withMessages([
+                'password' => $violations,
+            ]);
+        }
     }
 }
