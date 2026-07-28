@@ -39,7 +39,7 @@ Route::get('sanctum/csrf-cookie', [CsrfCookieController::class, 'show'])
 Route::post('login', [LoginController::class, 'login'])
     ->name('login');
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     Route::post('logout', [LoginController::class, 'logout'])
         ->name('logout');
     /* menu */

@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Middleware\AuthenticateIdeliumKey;
+use App\Http\Middleware\ResolveTenantContext;
 use App\Models\Costumer;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Foundation\Bus\DispatchesJobs;
 use Illuminate\Foundation\Validation\ValidatesRequests;
@@ -26,5 +28,17 @@ class Controller extends BaseController
         }
 
         return $customer;
+    }
+
+    protected function tenantContext(Request $request): TenantContext
+    {
+        $context = $request->attributes->get(ResolveTenantContext::ATTRIBUTE)
+            ?? $request->attributes->get(AuthenticateIdeliumKey::TENANT_CONTEXT_ATTRIBUTE);
+
+        if (! $context instanceof TenantContext) {
+            throw new LogicException('Tenant context is not available.');
+        }
+
+        return $context;
     }
 }
