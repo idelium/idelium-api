@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ArtifactDescriptor;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
 
 class ArtifactLifecycleService
@@ -90,10 +91,110 @@ class ArtifactLifecycleService
         return $artifact;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    public function impactSummary(ArtifactDescriptor $artifact): array
+    {
+        $legalHold = $this->legalHoldEnabled($artifact);
+        $retentionExpired = $this->retentionExpired($artifact);
+
+        return [
+            'artifact' => [
+                'id' => $artifact->id,
+                'name' => $artifact->name,
+                'artifactType' => $artifact->artifactType,
+                'contentType' => $artifact->contentType,
+                'sizeBytes' => $artifact->sizeBytes,
+                'state' => $artifact->state,
+                'retentionUntil' => optional($artifact->retentionUntil)->toISOString(),
+                'performedTestCycleId' => $artifact->performedTestCycleId,
+                'performedTestId' => $artifact->performedTestId,
+                'performedStepId' => $artifact->performedStepId,
+            ],
+            'summary' => [
+                'legalHold' => $legalHold,
+                'retentionExpired' => $retentionExpired,
+                'hardDeleteEligible' => $this->hardDeleteEligible($artifact),
+                'affectedDescriptors' => 1,
+                'storageBytes' => $artifact->sizeBytes,
+            ],
+            'blockers' => $this->lifecycleBlockers($artifact),
+            'actions' => [
+                'archiveAllowed' => ! $legalHold && $artifact->state !== ArtifactDescriptor::STATE_DELETED,
+                'restoreAllowed' => $artifact->state === ArtifactDescriptor::STATE_ARCHIVED,
+                'deleteMarkerAllowed' => ! $legalHold,
+                'hardDeleteAllowed' => $this->hardDeleteEligible($artifact),
+            ],
+        ];
+    }
+
+    /**
+     * @return Collection<int, ArtifactDescriptor>
+     */
+    public function hardDeleteCandidates(int $limit = 100): Collection
+    {
+        return ArtifactDescriptor::query()
+            ->whereNotNull('retentionUntil')
+            ->where('retentionUntil', '<=', now())
+            ->whereIn('state', [
+                ArtifactDescriptor::STATE_ARCHIVED,
+                ArtifactDescriptor::STATE_DELETED,
+                ArtifactDescriptor::STATE_EXPIRED,
+            ])
+            ->orderBy('retentionUntil')
+            ->limit($limit)
+            ->get()
+            ->filter(fn (ArtifactDescriptor $artifact) => $this->hardDeleteEligible($artifact))
+            ->values();
+    }
+
+    public function hardDeleteEligible(ArtifactDescriptor $artifact): bool
+    {
+        return ! $this->legalHoldEnabled($artifact)
+            && $this->retentionExpired($artifact)
+            && in_array($artifact->state, [
+                ArtifactDescriptor::STATE_ARCHIVED,
+                ArtifactDescriptor::STATE_DELETED,
+                ArtifactDescriptor::STATE_EXPIRED,
+            ], true);
+    }
+
+    public function retentionExpired(ArtifactDescriptor $artifact): bool
+    {
+        return $artifact->retentionUntil !== null && $artifact->retentionUntil->lte(now());
+    }
+
     public function legalHoldEnabled(ArtifactDescriptor $artifact): bool
     {
         $metadata = $artifact->metadata ?? [];
 
         return (bool) ($metadata['legalHold']['enabled'] ?? false);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function lifecycleBlockers(ArtifactDescriptor $artifact): array
+    {
+        $blockers = [];
+
+        if ($this->legalHoldEnabled($artifact)) {
+            $blockers[] = 'Artifact is under legal hold.';
+        }
+
+        if (! $this->retentionExpired($artifact)) {
+            $blockers[] = 'Retention period has not expired.';
+        }
+
+        if (! in_array($artifact->state, [
+            ArtifactDescriptor::STATE_ARCHIVED,
+            ArtifactDescriptor::STATE_DELETED,
+            ArtifactDescriptor::STATE_EXPIRED,
+        ], true)) {
+            $blockers[] = 'Artifact state is not eligible for hard delete.';
+        }
+
+        return $blockers;
     }
 }

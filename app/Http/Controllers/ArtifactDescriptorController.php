@@ -53,6 +53,20 @@ class ArtifactDescriptorController extends Controller
         ]);
     }
 
+    public function impact(
+        Request $request,
+        int $idProject,
+        int $performedTestCycleId,
+        ArtifactDescriptor $artifactDescriptor
+    ) {
+        $this->capabilities->require($request->user(), 'artifacts.read');
+        $this->assertOwnedArtifact($request, $idProject, $performedTestCycleId, $artifactDescriptor);
+
+        return response()->json([
+            'data' => $this->artifactLifecycle->impactSummary($artifactDescriptor),
+        ]);
+    }
+
     public function legalHold(
         Request $request,
         int $idProject,

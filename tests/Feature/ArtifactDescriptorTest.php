@@ -5,14 +5,17 @@ namespace Tests\Feature;
 use App\Models\ArtifactDescriptor;
 use App\Models\AuditEvent;
 use App\Models\Costumer;
+use App\Jobs\PurgeArtifactDescriptorJob;
 use App\Models\PerformedTestCycle;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\TestCycle;
 use App\Models\User;
+use App\Services\ArtifactLifecycleService;
 use App\Services\ArtifactDescriptorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ArtifactDescriptorTest extends TestCase
@@ -267,6 +270,128 @@ class ArtifactDescriptorTest extends TestCase
             ->postJson($basePath.'/archive')
             ->assertUnprocessable()
             ->assertJsonPath('errors.artifact.0', 'Artifact is under legal hold and cannot be archived.');
+    }
+
+    public function test_artifact_impact_summary_is_tenant_scoped_and_reports_lifecycle_blockers(): void
+    {
+        $admin = $this->createUser($this->firstCustomer, 2);
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'impact.json'
+        );
+        $descriptor->forceFill([
+            'state' => ArtifactDescriptor::STATE_ARCHIVED,
+            'retentionUntil' => now()->subDay(),
+        ])->save();
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->getJson(
+                '/api/admin/projects/'.$this->firstProject->id
+                .'/performed-test-cycles/'.$this->firstRun->id
+                .'/artifacts/'.$descriptor->id.'/impact'
+            )
+            ->assertOk()
+            ->assertJsonPath('data.artifact.id', $descriptor->id)
+            ->assertJsonPath('data.summary.hardDeleteEligible', true)
+            ->assertJsonPath('data.summary.storageBytes', 2)
+            ->assertJsonPath('data.actions.hardDeleteAllowed', true);
+    }
+
+    public function test_hard_delete_job_removes_eligible_artifact_and_is_idempotent(): void
+    {
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'purge.json'
+        );
+        $descriptor->forceFill([
+            'state' => ArtifactDescriptor::STATE_ARCHIVED,
+            'retentionUntil' => now()->subDay(),
+        ])->save();
+        $job = new PurgeArtifactDescriptorJob($descriptor->id);
+
+        $job->handle(app(ArtifactLifecycleService::class));
+
+        $this->assertDatabaseMissing('artifact_descriptors', ['id' => $descriptor->id]);
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.hard_delete')
+            ->where('result', AuditEvent::RESULT_SUCCESS)
+            ->count());
+
+        $job->handle(app(ArtifactLifecycleService::class));
+
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.hard_delete')
+            ->where('result', AuditEvent::RESULT_SUCCESS)
+            ->count());
+    }
+
+    public function test_hard_delete_job_respects_legal_hold(): void
+    {
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'held-purge.json'
+        );
+        $descriptor->forceFill([
+            'state' => ArtifactDescriptor::STATE_ARCHIVED,
+            'retentionUntil' => now()->subDay(),
+            'metadata' => [
+                'legalHold' => [
+                    'enabled' => true,
+                    'reason' => 'Investigation hold',
+                    'changedAt' => now()->toISOString(),
+                ],
+            ],
+        ])->save();
+
+        (new PurgeArtifactDescriptorJob($descriptor->id))->handle(app(ArtifactLifecycleService::class));
+
+        $this->assertDatabaseHas('artifact_descriptors', ['id' => $descriptor->id]);
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.hard_delete')
+            ->where('result', AuditEvent::RESULT_FAILURE)
+            ->count());
+    }
+
+    public function test_purge_expired_artifacts_command_queues_only_eligible_descriptors(): void
+    {
+        Queue::fake();
+        $eligible = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'eligible.json'
+        );
+        $eligible->forceFill([
+            'state' => ArtifactDescriptor::STATE_ARCHIVED,
+            'retentionUntil' => now()->subDay(),
+        ])->save();
+        $activeRetention = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'active-retention.json'
+        );
+        $activeRetention->forceFill([
+            'state' => ArtifactDescriptor::STATE_ARCHIVED,
+            'retentionUntil' => now()->addDay(),
+        ])->save();
+
+        $this->artisan('artifacts:purge-expired --limit=10')
+            ->expectsOutput('Queued 1 artifact purge jobs.')
+            ->assertExitCode(0);
+
+        Queue::assertPushed(
+            PurgeArtifactDescriptorJob::class,
+            fn (PurgeArtifactDescriptorJob $job): bool => $job->artifactDescriptorId() === $eligible->id
+        );
+        Queue::assertNotPushed(
+            PurgeArtifactDescriptorJob::class,
+            fn (PurgeArtifactDescriptorJob $job): bool => $job->artifactDescriptorId() === $activeRetention->id
+        );
     }
 
     private function createDescriptor(

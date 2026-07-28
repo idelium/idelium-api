@@ -156,6 +156,10 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}',
         [ArtifactDescriptorController::class, 'show']
     )->name('artifacts.show');
+    Route::get(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/impact',
+        [ArtifactDescriptorController::class, 'impact']
+    )->name('artifacts.impact');
     Route::put(
         'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/legal-hold',
         [ArtifactDescriptorController::class, 'legalHold']
