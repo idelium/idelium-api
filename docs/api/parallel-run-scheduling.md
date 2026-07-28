@@ -51,6 +51,36 @@ existence is not leaked.
 the authenticated customer and project, so retrying the same schedule request
 returns the existing run instead of creating duplicates.
 
+## Run metadata
+
+Run metadata is normalized under `metadata.run` at schedule creation time:
+
+```json
+{
+  "run": {
+    "build": "1042",
+    "commit": "abc123",
+    "branch": "main",
+    "repository": "idelium/idelium-cli",
+    "initiator": "ci",
+    "pipeline": "release",
+    "workloadIdentity": {
+      "provider": "github-actions",
+      "issuer": "https://token.actions.githubusercontent.com",
+      "subject": "repo:idelium/idelium-cli:ref:refs/heads/main",
+      "audience": "idelium"
+    }
+  }
+}
+```
+
+Legacy top-level metadata fields with the same names are accepted and moved into
+`metadata.run`. Sensitive claims such as tokens, API keys, credentials,
+authorization headers, cookies, and passwords are removed before persistence.
+
+The list endpoint supports exact-match filters for `build`, `commit`, `branch`,
+`repository`, `initiator`, and `pipeline`.
+
 ## Worker lifecycle
 
 Workers claim capacity with `POST .../claim` and a stable `workerId`. The API

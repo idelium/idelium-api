@@ -136,6 +136,62 @@ class ParallelRunScheduleApiTest extends TestCase
         );
     }
 
+    public function test_parallel_run_normalizes_and_filters_immutable_run_metadata(): void
+    {
+        Sanctum::actingAs($this->createUser($this->firstCustomer));
+
+        $this->postJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs', [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'metadata-contract',
+            'metadata' => [
+                'build' => '1042',
+                'commit' => 'abc123',
+                'branch' => 'main',
+                'repository' => 'idelium/idelium-api',
+                'initiator' => 'ci',
+                'pipeline' => 'release',
+                'token' => 'must-not-persist',
+                'workloadIdentity' => [
+                    'provider' => 'github-actions',
+                    'issuer' => 'https://token.actions.githubusercontent.com',
+                    'subject' => 'repo:idelium/idelium-api:ref:refs/heads/main',
+                    'audience' => 'idelium',
+                    'authorization' => 'Bearer secret',
+                ],
+            ],
+        ])->assertCreated()
+            ->assertJsonPath('metadata.run.build', '1042')
+            ->assertJsonPath('metadata.run.commit', 'abc123')
+            ->assertJsonPath('metadata.run.workloadIdentity.provider', 'github-actions')
+            ->assertJsonMissingPath('metadata.token')
+            ->assertJsonMissingPath('metadata.run.workloadIdentity.authorization');
+
+        $this->postJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs', [
+            'testCycleId' => $this->firstCycle->id,
+            'idempotencyKey' => 'other-metadata-contract',
+            'metadata' => [
+                'run' => [
+                    'build' => '2048',
+                    'commit' => 'def456',
+                    'branch' => 'feature',
+                    'repository' => 'idelium/idelium-api',
+                    'initiator' => 'manual',
+                    'pipeline' => 'nightly',
+                ],
+            ],
+        ])->assertCreated();
+
+        $this->getJson('/api/admin/projects/'.$this->firstProject->id.'/parallel-runs?commit=abc123')
+            ->assertOk()
+            ->assertJsonCount(1)
+            ->assertJsonPath('0.idempotencyKey', 'metadata-contract')
+            ->assertJsonPath('0.metadata.run.pipeline', 'release');
+
+        $this->assertDatabaseMissing('parallel_run_schedules', [
+            'metadata' => json_encode(['token' => 'must-not-persist']),
+        ]);
+    }
+
     public function test_sanctum_user_cannot_schedule_for_another_customer_project_or_cycle(): void
     {
         Sanctum::actingAs($this->createUser($this->firstCustomer));

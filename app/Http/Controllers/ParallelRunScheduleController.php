@@ -8,6 +8,7 @@ use App\Models\Project;
 use App\Models\TestCycle;
 use App\Services\AuditEventService;
 use App\Services\AssetVersionService;
+use App\Services\RunMetadataService;
 use App\Services\RunTokenService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class ParallelRunScheduleController extends Controller
         private readonly RunTokenService $runTokens,
         private readonly AuditEventService $auditEvents,
         private readonly AssetVersionService $assetVersions,
+        private readonly RunMetadataService $runMetadata,
     ) {}
 
     public function index(Request $request, int $idProject): JsonResponse
@@ -44,6 +46,10 @@ class ParallelRunScheduleController extends Controller
             ->orderByDesc('updated_at')
             ->limit(50)
             ->get()
+            ->filter(fn (ParallelRunSchedule $schedule) => $this->runMetadata->matchesFilters(
+                $schedule->metadata ?? [],
+                $this->runMetadataFilters($request)
+            ))
             ->map(fn (ParallelRunSchedule $schedule) => $this->scheduleResponse($schedule))
             ->values();
 
@@ -74,7 +80,7 @@ class ParallelRunScheduleController extends Controller
                 (int) $validated['testCycleId'],
                 true
             );
-            $metadata = $validated['metadata'] ?? [];
+            $metadata = $this->runMetadata->normalize($validated['metadata'] ?? []);
             $metadata['executionSnapshot'] = $this->assetVersions
                 ->executionSnapshotForTestCycle($testCycle);
 
@@ -418,6 +424,23 @@ class ParallelRunScheduleController extends Controller
         return Costumer::findOrFail(Auth::user()->idCostumer);
     }
 
+    /**
+     * @return array<string, string|null>
+     */
+    private function runMetadataFilters(Request $request): array
+    {
+        $filters = [];
+
+        foreach ($this->runMetadata->filterFields() as $field) {
+            $value = $request->query($field);
+            $filters[$field] = is_scalar($value) && $value !== ''
+                ? (string) $value
+                : null;
+        }
+
+        return $filters;
+    }
+
     private function consumeRunTokenIfPresent(
         Request $request,
         int $tenantId,
@@ -608,6 +631,7 @@ class ParallelRunScheduleController extends Controller
             'idProject' => $schedule->idProject,
             'testCycleId' => $schedule->testCycleId,
             'performedTestCycleId' => $schedule->performedTestCycleId,
+            'idempotencyKey' => $schedule->idempotencyKey,
             'status' => $schedule->status,
             'requestedConcurrency' => $schedule->requestedConcurrency,
             'activeWorkers' => $schedule->activeWorkers,
