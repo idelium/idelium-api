@@ -113,6 +113,78 @@ class ArtifactDescriptorController extends Controller
         ]);
     }
 
+    public function archive(
+        Request $request,
+        int $idProject,
+        int $performedTestCycleId,
+        ArtifactDescriptor $artifactDescriptor
+    ) {
+        $this->capabilities->require($request->user(), 'artifacts.manage');
+        $this->assertOwnedArtifact($request, $idProject, $performedTestCycleId, $artifactDescriptor);
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:1000'],
+            'restoreBy' => ['nullable', 'date'],
+        ]);
+        $before = [
+            'state' => $artifactDescriptor->state,
+            'metadata' => $artifactDescriptor->metadata,
+        ];
+        $artifact = $this->artifactLifecycle->archive(
+            $artifactDescriptor,
+            $validated['reason'] ?? null,
+            $validated['restoreBy'] ?? null
+        );
+
+        $this->auditEvents->record(
+            $request,
+            'artifact.archive',
+            'artifact_descriptor',
+            (string) $artifact->id,
+            beforeValues: $before,
+            afterValues: [
+                'state' => $artifact->state,
+                'metadata' => $artifact->metadata,
+            ],
+            projectId: $artifact->idProject,
+        );
+
+        return response()->json([
+            'data' => $artifact,
+        ]);
+    }
+
+    public function restore(
+        Request $request,
+        int $idProject,
+        int $performedTestCycleId,
+        ArtifactDescriptor $artifactDescriptor
+    ) {
+        $this->capabilities->require($request->user(), 'artifacts.manage');
+        $this->assertOwnedArtifact($request, $idProject, $performedTestCycleId, $artifactDescriptor);
+        $before = [
+            'state' => $artifactDescriptor->state,
+            'metadata' => $artifactDescriptor->metadata,
+        ];
+        $artifact = $this->artifactLifecycle->restore($artifactDescriptor);
+
+        $this->auditEvents->record(
+            $request,
+            'artifact.restore',
+            'artifact_descriptor',
+            (string) $artifact->id,
+            beforeValues: $before,
+            afterValues: [
+                'state' => $artifact->state,
+                'metadata' => $artifact->metadata,
+            ],
+            projectId: $artifact->idProject,
+        );
+
+        return response()->json([
+            'data' => $artifact,
+        ]);
+    }
+
     private function assertOwnedArtifact(
         Request $request,
         int $idProject,

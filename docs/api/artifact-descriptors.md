@@ -13,10 +13,10 @@ state, and retention without exposing storage internals to the Web UI.
   retention timestamp, and storage key.
 - The API rejects unsupported content types, invalid checksums, and artifacts
   larger than `IDELIUM_ARTIFACT_MAX_SIZE_BYTES`.
-- Stable lifecycle states are `available`, `expired`, `quarantined`,
-  `unavailable`, and `deleted`.
-- Legal hold is stored in descriptor metadata and prevents deletion markers
-  while enabled.
+- Stable lifecycle states are `available`, `archived`, `expired`,
+  `quarantined`, `unavailable`, and `deleted`.
+- Legal hold is stored in descriptor metadata and prevents archive or deletion
+  markers while enabled.
 - Web clients should enable artifact actions only from these descriptors.
 
 ## Endpoints
@@ -25,10 +25,14 @@ state, and retention without exposing storage internals to the Web UI.
 - `GET /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}`
 - `PUT /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/legal-hold`
 - `POST /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/delete-marker`
+- `POST /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/archive`
+- `POST /api/admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/restore`
 
-The legal-hold and delete-marker endpoints require the `artifacts.manage`
-capability and record audit events. Delete markers are rejected while legal hold
-is enabled.
+The legal-hold, archive, restore, and delete-marker endpoints require the
+`artifacts.manage` capability and record audit events. Archive and delete-marker
+transitions are rejected while legal hold is enabled. Archived artifacts can be
+restored back to `available`; deleted artifacts cannot be archived or restored
+through the reversible lifecycle path.
 
 ## Migration Policy
 

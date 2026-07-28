@@ -164,6 +164,14 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/delete-marker',
         [ArtifactDescriptorController::class, 'markDeleted']
     )->name('artifacts.markDeleted');
+    Route::post(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/archive',
+        [ArtifactDescriptorController::class, 'archive']
+    )->name('artifacts.archive');
+    Route::post(
+        'admin/projects/{idProject}/performed-test-cycles/{performedTestCycleId}/artifacts/{artifactDescriptor}/restore',
+        [ArtifactDescriptorController::class, 'restore']
+    )->name('artifacts.restore');
     /* testlauncher */
     Route::post('admin/launchtest', [TestLauncherController::class, 'launchTest'])
         ->name('testlauncher.launchTest');

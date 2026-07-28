@@ -207,6 +207,68 @@ class ArtifactDescriptorTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_artifact_archive_and_restore_are_reversible_and_audited(): void
+    {
+        $admin = $this->createUser($this->firstCustomer, 2);
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'archive.json'
+        );
+        $basePath = '/api/admin/projects/'.$this->firstProject->id
+            .'/performed-test-cycles/'.$this->firstRun->id
+            .'/artifacts/'.$descriptor->id;
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->postJson($basePath.'/archive', [
+                'reason' => 'Retention grace period',
+                'restoreBy' => '2026-08-31T00:00:00Z',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.state', ArtifactDescriptor::STATE_ARCHIVED)
+            ->assertJsonPath('data.metadata.archive.reason', 'Retention grace period')
+            ->assertJsonPath('data.metadata.archive.restoreBy', '2026-08-31T00:00:00Z');
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->postJson($basePath.'/restore')
+            ->assertOk()
+            ->assertJsonPath('data.state', ArtifactDescriptor::STATE_AVAILABLE);
+
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.archive')->count());
+        $this->assertSame(1, AuditEvent::where('action', 'artifact.restore')->count());
+    }
+
+    public function test_legal_hold_blocks_archive(): void
+    {
+        $admin = $this->createUser($this->firstCustomer, 2);
+        $descriptor = $this->createDescriptor(
+            $this->firstCustomer,
+            $this->firstProject,
+            $this->firstRun,
+            'held-archive.json'
+        );
+        $basePath = '/api/admin/projects/'.$this->firstProject->id
+            .'/performed-test-cycles/'.$this->firstRun->id
+            .'/artifacts/'.$descriptor->id;
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->putJson($basePath.'/legal-hold', [
+                'enabled' => true,
+                'reason' => 'Investigation hold',
+            ])
+            ->assertOk();
+
+        $this->actingAs($admin)
+            ->withHeader('Origin', 'https://localhost')
+            ->postJson($basePath.'/archive')
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.artifact.0', 'Artifact is under legal hold and cannot be archived.');
+    }
+
     private function createDescriptor(
         Costumer $customer,
         Project $project,

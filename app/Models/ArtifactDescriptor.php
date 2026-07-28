@@ -29,6 +29,8 @@ class ArtifactDescriptor extends Model
 
     public const STATE_UNAVAILABLE = 'unavailable';
 
+    public const STATE_ARCHIVED = 'archived';
+
     public const STATE_DELETED = 'deleted';
 
     protected $guarded = [];
