@@ -23,6 +23,7 @@ use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\PluginController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ServiceAccountController;
 use App\Http\Controllers\SideBarController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\StepController;
@@ -88,6 +89,13 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('costumers.getKey');
     Route::put('admin/apikey', [CostumerController::class, 'updateKey'])
         ->name('costumers.updateKey');
+    /* service accounts */
+    Route::get('admin/service-accounts', [ServiceAccountController::class, 'index'])
+        ->name('service-accounts.index');
+    Route::post('admin/service-accounts', [ServiceAccountController::class, 'store'])
+        ->name('service-accounts.store');
+    Route::post('admin/service-accounts/{serviceAccount}/revoke', [ServiceAccountController::class, 'revoke'])
+        ->name('service-accounts.revoke');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
     /* parallel runs */
