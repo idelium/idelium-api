@@ -4,6 +4,7 @@ use App\Http\Controllers\BrandDeviceController;
 use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\AuditEventController;
 use App\Http\Controllers\ArtifactDescriptorController;
+use App\Http\Controllers\AssetImpactController;
 use App\Http\Controllers\AssetVersionController;
 use App\Http\Controllers\CapabilityController;
 use App\Http\Controllers\CostumerController;
@@ -99,6 +100,11 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('service-accounts.revoke');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
+    /* asset impact */
+    Route::get(
+        'admin/projects/{idProject}/asset-impact/{assetType}/{assetId}',
+        [AssetImpactController::class, 'show']
+    )->whereNumber('assetId')->name('assetimpact.show');
     /* asset versions */
     Route::get(
         'admin/projects/{idProject}/asset-versions/{assetType}/{assetId}',
