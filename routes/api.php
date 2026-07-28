@@ -14,6 +14,7 @@ use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
 use App\Http\Controllers\ImportSeleniumController;
+use App\Http\Controllers\IdentityLifecycleController;
 use App\Http\Controllers\IntegrationEndpointController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
@@ -112,6 +113,20 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('service-accounts.store');
     Route::post('admin/service-accounts/{serviceAccount}/revoke', [ServiceAccountController::class, 'revoke'])
         ->name('service-accounts.revoke');
+    /* identity lifecycle */
+    Route::get('admin/identity/providers', [IdentityLifecycleController::class, 'providers'])
+        ->name('identity.providers');
+    Route::post('admin/identity/providers', [IdentityLifecycleController::class, 'storeProvider'])
+        ->name('identity.storeProvider');
+    Route::post('admin/identity/providers/{identityProvider}/scim/users', [IdentityLifecycleController::class, 'scimUpsertUser'])
+        ->whereNumber('identityProvider')
+        ->name('identity.scimUpsertUser');
+    Route::put('admin/identity/accounts/{user}/break-glass', [IdentityLifecycleController::class, 'updateBreakGlass'])
+        ->whereNumber('user')
+        ->name('identity.updateBreakGlass');
+    Route::post('admin/identity/accounts/{user}/break-glass/test', [IdentityLifecycleController::class, 'recordBreakGlassTest'])
+        ->whereNumber('user')
+        ->name('identity.recordBreakGlassTest');
     /* agents */
     Route::get('admin/agents', [AgentRegistrationController::class, 'index'])
         ->name('agents.index');
