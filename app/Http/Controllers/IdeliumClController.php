@@ -7,14 +7,11 @@ use App\Models\Plugin;
 use App\Models\Step;
 use App\Models\Test;
 use App\Models\TestCycle;
-use App\Services\PluginManifestService;
 use Illuminate\Http\Request;
 
 class IdeliumClController extends Controller
 {
     const INVALID_ID = 'Invalid id';
-
-    public function __construct(private PluginManifestService $pluginManifests) {}
 
     public function getTestCycle(Request $request, $idTestCycle)
     {
@@ -43,10 +40,7 @@ class IdeliumClController extends Controller
             ], 404);
         }
 
-        $plugin = $query[0];
-        $plugin->code = $this->pluginManifests->cliPayload($plugin);
-
-        return $plugin;
+        return $query[0];
     }
 
     public function getStep(Request $request, $idStep)

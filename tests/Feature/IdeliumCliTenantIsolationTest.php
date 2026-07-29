@@ -115,6 +115,26 @@ class IdeliumCliTenantIsolationTest extends TestCase
             ->assertExactJson(['message' => 'Invalid id']);
     }
 
+    public function test_customer_can_read_own_test_without_plugin_manifest_transformation(): void
+    {
+        $test = $this->createTest($this->firstCostumer, 'Authorized test');
+
+        $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
+            ->getJson('/api/ideliumcl/test/'.$test->id)
+            ->assertOk()
+            ->assertJsonPath('id', $test->id)
+            ->assertJsonPath('config', '[]')
+            ->assertJsonMissingPath('code');
+    }
+
+    public function test_customer_gets_not_found_for_missing_cli_test(): void
+    {
+        $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
+            ->getJson('/api/ideliumcl/test/99999')
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Invalid id']);
+    }
+
     public function test_customer_cannot_read_another_customer_step(): void
     {
         $step = $this->createStep($this->secondCostumer, 'Protected step');
