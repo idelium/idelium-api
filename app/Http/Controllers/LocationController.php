@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Location;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,7 +15,15 @@ class LocationController extends Controller
             return response()->json('ok');
         }
 
-        return Location::get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            Location::query(),
+            ['id', 'name', 'created_at', 'updated_at'],
+            'id',
+            'asc',
+            ['name'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

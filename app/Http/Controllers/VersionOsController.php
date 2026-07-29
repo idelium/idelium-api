@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\VersionOs;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -14,8 +15,15 @@ class VersionOsController extends Controller
             return response()->json('ok');
         }
 
-        return VersionOs::where('idOs', '=', $idOs)
-            ->orderBy('version', 'asc')->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            VersionOs::where('idOs', '=', $idOs),
+            ['id', 'version', 'created_at', 'updated_at'],
+            'version',
+            'asc',
+            ['version'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

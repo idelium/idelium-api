@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ModelDevice;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,15 @@ class ModelDeviceController extends Controller
             return response()->json('ok');
         }
 
-        return ModelDevice::where('idBrand', '=', $idBrand)->orderBy('model', 'asc')->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            ModelDevice::where('idBrand', '=', $idBrand),
+            ['id', 'model', 'created_at', 'updated_at'],
+            'model',
+            'asc',
+            ['model'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

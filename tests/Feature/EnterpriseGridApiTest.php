@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\BrandDevice;
 use App\Models\Costumer;
 use App\Models\Environment;
+use App\Models\Platform;
 use App\Models\Plugin;
 use App\Models\Project;
 use App\Models\Role;
@@ -345,6 +347,86 @@ class EnterpriseGridApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data', [])
             ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_platform_grid_supports_bounded_search_filter_sort_and_pagination(): void
+    {
+        Role::forceCreate(['id' => 1, 'name' => 'superadmin']);
+        [, $superadmin] = $this->createTenant('platforms', 1);
+        Platform::forceCreate([
+            'type' => 1,
+            'hostname' => 'https://linux-one.example.test:8691',
+            'location' => 1,
+            'os' => 10,
+            'osversion' => 100,
+            'brand' => 0,
+            'browser' => 20,
+            'brandDescription' => '',
+            'osDescription' => 'Linux',
+            'browserDescription' => 'Firefox',
+            'status' => 1,
+        ]);
+        $matching = Platform::forceCreate([
+            'type' => 1,
+            'hostname' => 'https://linux-two.example.test:8691',
+            'location' => 2,
+            'os' => 10,
+            'osversion' => 101,
+            'brand' => 0,
+            'browser' => 21,
+            'brandDescription' => '',
+            'osDescription' => 'Linux',
+            'browserDescription' => 'Chromium',
+            'status' => 2,
+        ]);
+        Platform::forceCreate([
+            'type' => 2,
+            'hostname' => 'https://mobile.example.test:8691',
+            'location' => 2,
+            'os' => 11,
+            'osversion' => 102,
+            'brand' => 4,
+            'browser' => 0,
+            'brandDescription' => 'Example',
+            'osDescription' => 'Mobile OS',
+            'browserDescription' => '',
+            'status' => 2,
+        ]);
+
+        Sanctum::actingAs($superadmin);
+
+        $this->getJson(
+            '/api/admin/platforms/manageplatforms/1?page=1&pageSize=1'
+            .'&search=linux&sort=hostname&direction=desc&filter[status]=2'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $matching->id)
+            ->assertJsonPath('meta.page', 1)
+            ->assertJsonPath('meta.pageSize', 1)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.sort', 'hostname')
+            ->assertJsonPath('meta.direction', 'desc');
+    }
+
+    public function test_platform_reference_grid_preserves_legacy_and_bounded_contracts(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [, $user] = $this->createTenant('references');
+        BrandDevice::forceCreate(['brand' => 'Apple']);
+        BrandDevice::forceCreate(['brand' => 'Samsung']);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson('/api/admin/platforms/brands')
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonMissingPath('meta');
+
+        $this->getJson(
+            '/api/admin/platforms/brands?page=1&pageSize=1&search=sam&sort=brand&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.brand', 'Samsung')
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.pageSize', 1);
     }
 
     private function createTenant(string $prefix, int $role = 3): array

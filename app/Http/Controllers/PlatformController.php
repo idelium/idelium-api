@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Platform;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,9 +16,30 @@ class PlatformController extends Controller
             return response()->json('ok');
         }
 
-        return Platform::where('type', '=', $type)
-            ->orderBy('osDescription', 'asc')
-            ->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            Platform::where('type', '=', $type),
+            [
+                'id',
+                'hostname',
+                'location',
+                'brandDescription',
+                'osDescription',
+                'browserDescription',
+                'status',
+                'created_at',
+                'updated_at',
+            ],
+            'osDescription',
+            'asc',
+            [
+                'hostname',
+                'brandDescription',
+                'osDescription',
+                'browserDescription',
+            ],
+            ['id', 'location', 'status', 'brand', 'os', 'browser'],
+        );
     }
 
     public function store(Request $request)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BrandDevice;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,7 +11,15 @@ class BrandDeviceController extends Controller
 {
     public function index(Request $request)
     {
-        return BrandDevice::get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            BrandDevice::query(),
+            ['id', 'brand', 'created_at', 'updated_at'],
+            'id',
+            'asc',
+            ['brand'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

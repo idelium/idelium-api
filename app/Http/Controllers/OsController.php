@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Os;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,7 +11,15 @@ class OsController extends Controller
 {
     public function index(Request $request, $idType)
     {
-        return Os::where('type', '=', $idType)->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            Os::where('type', '=', $idType),
+            ['id', 'name', 'created_at', 'updated_at'],
+            'id',
+            'asc',
+            ['name'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

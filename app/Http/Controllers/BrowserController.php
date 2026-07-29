@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Browser;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -10,7 +11,15 @@ class BrowserController extends Controller
 {
     public function index(Request $request, $idOs)
     {
-        return Browser::where('idOs', '=', $idOs)->orderBy('name', 'asc')->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            Browser::where('idOs', '=', $idOs),
+            ['id', 'name', 'created_at', 'updated_at'],
+            'name',
+            'asc',
+            ['name'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)

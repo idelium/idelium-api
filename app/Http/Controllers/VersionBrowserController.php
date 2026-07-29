@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\VersionBrowser;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,7 +16,15 @@ class VersionBrowserController extends Controller
             return response()->json('ok');
         }
 
-        return VersionBrowser::where('idBrowser', '=', $idBrowser)->orderBy('version', 'asc')->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            VersionBrowser::where('idBrowser', '=', $idBrowser),
+            ['id', 'version', 'created_at', 'updated_at'],
+            'version',
+            'asc',
+            ['version'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)
