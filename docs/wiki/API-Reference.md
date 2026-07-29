@@ -91,7 +91,7 @@ linked from the wiki sidebar.
 | `DELETE` | `/api/admin/environments/{idProject}/{environment}` | `environments.destroy` | `EnvironmentController@destroy` | api, auth:sanctum, tenant.context |
 | `GET|HEAD` | `/api/admin/environments/{idProject}/{environment}` | `environments.show` | `EnvironmentController@show` | api, auth:sanctum, tenant.context |
 | `PUT` | `/api/admin/environments/{idProject}/{environment}` | `environments.update` | `EnvironmentController@update` | api, auth:sanctum, tenant.context |
-| `POST` | `/api/admin/importtest` | `importselenium.store` | `ImportSeleniumController@store` | api, auth:sanctum, tenant.context |
+| `POST` | `/api/admin/importtest` | `importtest.store` | `ImportTestController@store` | api, auth:sanctum, tenant.context |
 | `POST` | `/api/admin/launchtest` | `testlauncher.launchTest` | `TestLauncherController@launchTest` | api, auth:sanctum, tenant.context |
 | `POST` | `/api/admin/plugins` | `plugins.store` | `PluginController@store` | api, auth:sanctum, tenant.context |
 | `GET|HEAD` | `/api/admin/plugins/{idProject}` | `plugins.index` | `PluginController@index` | api, auth:sanctum, tenant.context |

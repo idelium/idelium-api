@@ -105,11 +105,12 @@ Selenium, Appium, Postman, and DSL migration compatibility.
 configuration. Test-cycle responses expose explicit fields only, and foreign
 project or foreign cycle access returns standard errors.
 
-## Selenium import and launch
+## Test import and launch
 
-`/api/admin/importtest` imports Selenium IDE data into steps and tests inside a
-transaction. `/api/admin/launchtest` starts a remote launch request with strict
-TLS verification, finite timeouts, and redacted upstream diagnostics.
+`/api/admin/importtest` imports native Idelium JSON test definitions into steps
+and tests inside a transaction. `/api/admin/launchtest` starts a remote launch
+request with strict TLS verification, finite timeouts, and redacted upstream
+diagnostics.
 
 ## Platform catalogues
 

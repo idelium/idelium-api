@@ -15,7 +15,7 @@ use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
 use App\Http\Controllers\IdentityLifecycleController;
-use App\Http\Controllers\ImportSeleniumController;
+use App\Http\Controllers\ImportTestController;
 use App\Http\Controllers\IntegrationEndpointController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\LoginController;
@@ -272,9 +272,9 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
         ->name('testcycles.update');
     Route::post('admin/testcycles', [TestCycleController::class, 'store'])
         ->name('testcycles.store');
-    /* importtest */
-    Route::post('admin/importtest', [ImportSeleniumController::class, 'store'])
-        ->name('importselenium.store');
+    /* test import */
+    Route::post('admin/importtest', [ImportTestController::class, 'store'])
+        ->name('importtest.store');
     /* tests */
     Route::get('admin/tests/{idProject}', [TestController::class, 'index'])
         ->name('tests.index');

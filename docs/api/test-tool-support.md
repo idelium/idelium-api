@@ -35,8 +35,8 @@ result fields are documented in [Performed result contracts](result-contracts.md
 
 Selenium steps are stored as JSON step definitions and reported back as
 performed steps with type `selenium` or `seleniumOrAppium`. The API also exposes
-the Selenium IDE import endpoint, which creates reusable steps and a test inside
-one database transaction.
+the native Idelium JSON import endpoint, which creates reusable steps and a test
+inside one database transaction.
 
 The CLI is responsible for local browser drivers, Selenium Grid sessions,
 browser capabilities, screenshots, and command execution.

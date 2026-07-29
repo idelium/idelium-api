@@ -10,13 +10,13 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
-class ImportSeleniumController extends Controller
+class ImportTestController extends Controller
 {
     public function store(Request $request)
     {
         $this->validate($request, [
-            'name' => 'required',
-            'description' => 'required',
+            'name' => 'required|string|max:255',
+            'description' => 'required|string|max:1024',
             'import' => 'required|json',
             'idProject' => 'required|integer',
         ]);
@@ -25,26 +25,22 @@ class ImportSeleniumController extends Controller
             ->where('idCostumer', Auth::user()->idCostumer)
             ->firstOrFail();
         $import = json_decode($request->input('import'));
-        if (! is_array($import)) {
+        if (! is_array($import) || count($import) === 0) {
             throw ValidationException::withMessages([
-                'import' => 'The import field must contain a JSON array.',
+                'import' => 'The import field must contain a non-empty JSON array of Idelium steps.',
             ]);
         }
+
         foreach ($import as $stepImported) {
-            if (! isset($stepImported->name) || ! is_string($stepImported->name)
-                || trim($stepImported->name) === '') {
-                throw ValidationException::withMessages([
-                    'import' => 'Every imported step must have a non-empty name.',
-                ]);
-            }
+            $this->validateImportedStep($stepImported);
         }
 
         DB::transaction(function () use ($request, $project, $import) {
             $importTest = [];
             foreach ($import as $stepImported) {
                 $step = new Step;
-                $step->name = str_replace(' ', '_', $stepImported->name);
-                $step->description = $stepImported->name;
+                $step->name = str_replace(' ', '_', trim($stepImported->name));
+                $step->description = trim($stepImported->name);
                 $step->config = json_encode($stepImported);
                 $step->idProject = $project->id;
                 $step->idCostumer = Auth::user()->idCostumer;
@@ -69,5 +65,37 @@ class ImportSeleniumController extends Controller
         return response()->json([
             'status' => 'ok',
         ]);
+    }
+
+    private function validateImportedStep(mixed $stepImported): void
+    {
+        if (! is_object($stepImported)) {
+            throw ValidationException::withMessages([
+                'import' => 'Every imported step must be a JSON object.',
+            ]);
+        }
+
+        if (! isset($stepImported->name) || ! is_string($stepImported->name)
+            || trim($stepImported->name) === '') {
+            throw ValidationException::withMessages([
+                'import' => 'Every imported step must have a non-empty name.',
+            ]);
+        }
+
+        if (! isset($stepImported->steps) || ! is_array($stepImported->steps)
+            || count($stepImported->steps) === 0) {
+            throw ValidationException::withMessages([
+                'import' => 'Every imported Idelium step must include at least one executable action.',
+            ]);
+        }
+
+        foreach ($stepImported->steps as $action) {
+            if (! isset($action->stepType) || ! is_string($action->stepType)
+                || trim($action->stepType) === '') {
+                throw ValidationException::withMessages([
+                    'import' => 'Every imported action must include a stepType.',
+                ]);
+            }
+        }
     }
 }

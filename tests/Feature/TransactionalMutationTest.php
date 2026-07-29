@@ -81,15 +81,25 @@ class TransactionalMutationTest extends TestCase
         $this->assertSame(26, $first->fresh()->order);
     }
 
-    public function test_selenium_import_creates_all_records_together(): void
+    public function test_idelium_test_import_creates_all_records_together(): void
     {
         $this->postJson('/api/admin/importtest', [
             'name' => 'Imported test',
             'description' => 'Imported test',
             'idProject' => $this->project->id,
             'import' => json_encode([
-                ['name' => 'Open page', 'command' => 'open'],
-                ['name' => 'Check title', 'command' => 'assertTitle'],
+                [
+                    'name' => 'Open page',
+                    'steps' => [
+                        ['stepType' => 'open_browser', 'url' => 'https://idelium.org/demo/'],
+                    ],
+                ],
+                [
+                    'name' => 'Check title',
+                    'steps' => [
+                        ['stepType' => 'wait_for_next_step', 'findBy' => 'xpath', 'target' => '//h1'],
+                    ],
+                ],
             ]),
         ])->assertOk()->assertExactJson(['status' => 'ok']);
 
@@ -101,7 +111,7 @@ class TransactionalMutationTest extends TestCase
         ]);
     }
 
-    public function test_selenium_import_rejects_another_tenants_project(): void
+    public function test_idelium_test_import_rejects_another_tenants_project(): void
     {
         $otherCustomer = Costumer::forceCreate([
             'costumer' => 'Other customer',
@@ -120,8 +130,31 @@ class TransactionalMutationTest extends TestCase
             'name' => 'Imported test',
             'description' => 'Imported test',
             'idProject' => $otherProject->id,
-            'import' => json_encode([['name' => 'Open page']]),
+            'import' => json_encode([
+                [
+                    'name' => 'Open page',
+                    'steps' => [
+                        ['stepType' => 'open_browser', 'url' => 'https://idelium.org/demo/'],
+                    ],
+                ],
+            ]),
         ])->assertNotFound();
+
+        $this->assertDatabaseCount('steps', 0);
+        $this->assertDatabaseCount('tests', 0);
+    }
+
+    public function test_idelium_test_import_rejects_steps_without_actions(): void
+    {
+        $this->postJson('/api/admin/importtest', [
+            'name' => 'Imported test',
+            'description' => 'Imported test',
+            'idProject' => $this->project->id,
+            'import' => json_encode([
+                ['name' => 'Open page', 'steps' => []],
+            ]),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['import']);
 
         $this->assertDatabaseCount('steps', 0);
         $this->assertDatabaseCount('tests', 0);
