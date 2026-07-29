@@ -35,8 +35,8 @@ return new class extends Migration
             $table->foreign('performedTestId')->references('id')->on('performed_tests')->nullOnDelete();
             $table->foreign('performedStepId')->references('id')->on('performed_steps')->nullOnDelete();
             $table->unique(['idCostumer', 'checksumSha256', 'storageKey'], 'artifact_descriptors_tenant_checksum_storage_unique');
-            $table->index(['idCostumer', 'idProject', 'performedTestCycleId']);
-            $table->index(['idCostumer', 'state', 'retentionUntil']);
+            $table->index(['idCostumer', 'idProject', 'performedTestCycleId'], 'artifact_scope_run_idx');
+            $table->index(['idCostumer', 'state', 'retentionUntil'], 'artifact_state_retention_idx');
         });
     }
 

@@ -27,7 +27,7 @@ return new class extends Migration
 
             $table->foreign('idCostumer')->references('id')->on('costumers')->cascadeOnDelete();
             $table->foreign('idProject')->references('id')->on('projects')->cascadeOnDelete();
-            $table->index(['idCostumer', 'idProject', 'provider', 'expiresAt']);
+            $table->index(['idCostumer', 'idProject', 'provider', 'expiresAt'], 'oidc_token_scope_provider_expiry_idx');
         });
 
         Schema::create('oidc_workload_assertions', function (Blueprint $table) {

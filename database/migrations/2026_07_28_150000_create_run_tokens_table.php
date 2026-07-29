@@ -27,7 +27,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('parallel_run_schedules')
                 ->cascadeOnDelete();
-            $table->index(['idCostumer', 'idProject', 'parallelRunScheduleId', 'agentId']);
+            $table->index(['idCostumer', 'idProject', 'parallelRunScheduleId', 'agentId'], 'run_token_scope_agent_idx');
         });
     }
 
