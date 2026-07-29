@@ -188,6 +188,7 @@ Response and ownership contracts are documented separately:
 - [Performed result contracts](docs/api/result-contracts.md)
 - [Result exploration API](docs/api/result-exploration.md)
 - [Enterprise grid API contract](docs/api/enterprise-grid.md)
+- [Enterprise grid bulk operations](docs/api/grid-bulk-operations.md)
 - [Integration webhooks and adapters](docs/api/integrations.md)
 - [Enterprise identity lifecycle](docs/api/identity-lifecycle.md)
 - [OpenAPI v1 contract](docs/api/openapi-v1.md)

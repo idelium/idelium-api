@@ -10,6 +10,7 @@ use App\Http\Controllers\BrowserController;
 use App\Http\Controllers\CapabilityController;
 use App\Http\Controllers\CostumerController;
 use App\Http\Controllers\EnvironmentController;
+use App\Http\Controllers\GridBulkOperationController;
 use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\IdeliumClController;
 use App\Http\Controllers\IdeliumInsertClController;
@@ -179,6 +180,16 @@ Route::middleware(['auth:sanctum', 'tenant.context'])->group(function () {
     )->whereNumber(['idProject', 'integrationDelivery'])->name('integrations.replay');
     /* projects */
     Route::resource('admin/projects', ProjectController::class);
+    Route::post('admin/grid/query-snapshots', [GridBulkOperationController::class, 'storeSnapshot'])
+        ->name('grid.querySnapshots.store');
+    Route::post('admin/grid/bulk-jobs', [GridBulkOperationController::class, 'storeJob'])
+        ->name('grid.bulkJobs.store');
+    Route::get('admin/grid/bulk-jobs/{jobId}', [GridBulkOperationController::class, 'showJob'])
+        ->whereUuid('jobId')
+        ->name('grid.bulkJobs.show');
+    Route::get('admin/grid/bulk-jobs/{jobId}/export', [GridBulkOperationController::class, 'exportJob'])
+        ->whereUuid('jobId')
+        ->name('grid.bulkJobs.export');
     /* asset impact */
     Route::get(
         'admin/projects/{idProject}/asset-impact/{assetType}/{assetId}',

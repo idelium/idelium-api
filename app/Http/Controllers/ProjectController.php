@@ -25,7 +25,8 @@ class ProjectController extends Controller
     public function index(Request $request)
     {
         $query = Project::select('id', 'name', 'description')
-            ->where('idCostumer', $request->user()->idCostumer);
+            ->where('idCostumer', $request->user()->idCostumer)
+            ->whereNull('archivedAt');
 
         return app(EnterpriseGridResponse::class)->build(
             $request,
