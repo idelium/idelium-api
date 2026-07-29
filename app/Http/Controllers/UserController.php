@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\CapabilityService;
 use App\Services\PasswordPolicy;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,16 +25,35 @@ class UserController extends Controller
         $this->capabilities->require($authenticatedUser, 'accounts.manage');
 
         if ($authenticatedUser->role == 1) {
-            return $this->accountQuery()
-                ->orderBy('users.email', 'asc')
-                ->get();
+            $query = $this->accountQuery();
+        } else {
+            $query = $this->accountQuery()
+                ->where('users.role', '>', 1)
+                ->where('users.idCostumer', $authenticatedUser->idCostumer);
         }
 
-        return $this->accountQuery()
-            ->where('users.role', '>', 1)
-            ->where('users.idCostumer', $authenticatedUser->idCostumer)
-            ->orderBy('users.email', 'asc')
-            ->get();
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            [
+                'id' => 'users.id',
+                'email' => 'users.email',
+                'name' => 'users.name',
+                'role' => 'users.role',
+                'idCostumer' => 'users.idCostumer',
+                'costumer' => 'costumers.costumer',
+                'roleName' => 'roles.name',
+            ],
+            'email',
+            'asc',
+            [
+                'users.email',
+                'users.name',
+                'costumers.costumer',
+                'roles.name',
+            ],
+            ['users.id', 'users.role', 'users.idCostumer'],
+        );
     }
 
     public function store(Request $request)

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Library\ApiKey;
 use App\Models\Costumer;
 use App\Services\CapabilityService;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,7 +17,31 @@ class CostumerController extends Controller
     {
         $this->capabilities->require($request->user(), 'customers.manage');
 
-        return Costumer::orderBy('created_at', 'asc')->get();
+        $query = Costumer::select([
+            'id',
+            'costumer',
+            'description',
+            'licenseExpiration',
+            'created_at',
+            'updated_at',
+        ]);
+
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            [
+                'id',
+                'costumer',
+                'description',
+                'licenseExpiration',
+                'created_at',
+                'updated_at',
+            ],
+            'created_at',
+            'asc',
+            ['costumer', 'description'],
+            ['id'],
+        );
     }
 
     public function store(Request $request)
@@ -95,7 +120,7 @@ class CostumerController extends Controller
 
         $costumer = Costumer::findorFail($id);
         if ($costumer->delete()) {
-            return Costumer::orderBy('created_at', 'asc')->get();
+            return $this->index($request);
         }
     }
 }

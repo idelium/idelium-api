@@ -2,14 +2,15 @@
 
 namespace App\Support;
 
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\Request;
 
 class EnterpriseGridResponse
 {
     public function build(
         Request $request,
-        Builder $query,
+        EloquentBuilder|QueryBuilder $query,
         array $sortableColumns,
         string $defaultSort,
         string $defaultDirection,
@@ -19,8 +20,11 @@ class EnterpriseGridResponse
         $this->applySearch($request, $query, $searchColumns);
         $this->applyFilters($request, $query, $filterColumns);
 
-        $sort = $request->query('sort', $defaultSort);
-        if (! in_array($sort, $sortableColumns, true)) {
+        $sortMap = array_is_list($sortableColumns)
+            ? array_combine($sortableColumns, $sortableColumns)
+            : $sortableColumns;
+        $sort = (string) $request->query('sort', $defaultSort);
+        if (! array_key_exists($sort, $sortMap)) {
             $sort = $defaultSort;
         }
 
@@ -29,7 +33,7 @@ class EnterpriseGridResponse
             $direction = $defaultDirection;
         }
 
-        $query->orderBy($sort, $direction);
+        $query->orderBy($sortMap[$sort], $direction);
 
         if (! $request->filled('page') && ! $request->filled('pageSize')) {
             return $query->get();
@@ -56,23 +60,29 @@ class EnterpriseGridResponse
         ]);
     }
 
-    private function applySearch(Request $request, Builder $query, array $columns): void
-    {
+    private function applySearch(
+        Request $request,
+        EloquentBuilder|QueryBuilder $query,
+        array $columns
+    ): void {
         $search = trim((string) $request->query('search', ''));
         if ($search === '' || $columns === []) {
             return;
         }
 
         $boundedSearch = mb_substr($search, 0, 200);
-        $query->where(function (Builder $builder) use ($columns, $boundedSearch) {
+        $query->where(function ($builder) use ($columns, $boundedSearch) {
             foreach ($columns as $column) {
                 $builder->orWhere($column, 'like', '%'.$boundedSearch.'%');
             }
         });
     }
 
-    private function applyFilters(Request $request, Builder $query, array $columns): void
-    {
+    private function applyFilters(
+        Request $request,
+        EloquentBuilder|QueryBuilder $query,
+        array $columns
+    ): void {
         $filters = $request->query('filter', []);
         if (! is_array($filters)) {
             return;

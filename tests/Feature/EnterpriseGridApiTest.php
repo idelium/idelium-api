@@ -18,6 +18,54 @@ class EnterpriseGridApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_customers_grid_is_bounded_and_never_exposes_api_keys(): void
+    {
+        Role::forceCreate(['id' => 1, 'name' => 'superadmin']);
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$firstCustomer, $superadmin] = $this->createTenant('first', 1);
+        $secondCustomer = $this->createTenant('second')[0];
+
+        Sanctum::actingAs($superadmin);
+
+        $this->getJson(
+            '/api/admin/costumers?page=1&pageSize=1&search=second&sort=costumer&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.id', $secondCustomer->id)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonMissingPath('data.0.apiKey');
+
+        $this->getJson('/api/admin/costumers')
+            ->assertOk()
+            ->assertJsonMissingPath('0.apiKey')
+            ->assertJsonFragment(['id' => $firstCustomer->id]);
+    }
+
+    public function test_accounts_grid_is_bounded_and_preserves_tenant_scope(): void
+    {
+        Role::forceCreate(['id' => 2, 'name' => 'admin']);
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$firstCustomer, $admin] = $this->createTenant('first', 2);
+        [, $otherUser] = $this->createTenant('second');
+        User::forceCreate([
+            'name' => 'Matching user',
+            'role' => 3,
+            'email' => 'matching@example.test',
+            'password' => Hash::make('SensitivePassword123!'),
+            'idCostumer' => $firstCustomer->id,
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->getJson(
+            '/api/admin/accounts?page=1&pageSize=10&search=matching&sort=email&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.email', 'matching@example.test')
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('meta.sort', 'email')
+            ->assertJsonMissing(['email' => $otherUser->email])
+            ->assertJsonMissingPath('data.0.password');
+    }
+
     public function test_projects_grid_preserves_legacy_array_response_without_grid_parameters(): void
     {
         Role::forceCreate(['id' => 3, 'name' => 'user']);
@@ -249,7 +297,7 @@ class EnterpriseGridApiTest extends TestCase
             ->assertJsonPath('meta.total', 0);
     }
 
-    private function createTenant(string $prefix): array
+    private function createTenant(string $prefix, int $role = 3): array
     {
         $customer = Costumer::forceCreate([
             'costumer' => ucfirst($prefix).' customer',
@@ -260,7 +308,7 @@ class EnterpriseGridApiTest extends TestCase
         ]);
         $user = User::forceCreate([
             'name' => ucfirst($prefix).' user',
-            'role' => 3,
+            'role' => $role,
             'email' => $prefix.'@example.test',
             'password' => Hash::make('SensitivePassword123!'),
             'idCostumer' => $customer->id,
