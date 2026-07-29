@@ -8,6 +8,7 @@ use App\Models\Environment;
 use App\Services\AssetVersionService;
 use App\Services\EnvironmentSecretPolicy;
 use App\Services\TenantResourceService;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 
 class EnvironmentController extends Controller
@@ -22,10 +23,19 @@ class EnvironmentController extends Controller
     {
         $this->tenantResources->project($request->user(), $idProject);
 
-        return Environment::select('id', 'code', 'description')
+        $query = Environment::select('id', 'code', 'description')
             ->where('idProject', $idProject)
-            ->where('idCostumer', $request->user()->idCostumer)
-            ->get();
+            ->where('idCostumer', $request->user()->idCostumer);
+
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            ['id', 'code', 'description', 'created_at', 'updated_at'],
+            'created_at',
+            'asc',
+            ['code', 'description'],
+            ['id', 'code'],
+        );
     }
 
     public function store(StoreEnvironmentRequest $request)

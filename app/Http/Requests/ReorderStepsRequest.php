@@ -16,6 +16,7 @@ class ReorderStepsRequest extends FormRequest
         return [
             'order' => ['required', 'array'],
             'order.*.id' => ['required', 'integer'],
+            'offset' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }

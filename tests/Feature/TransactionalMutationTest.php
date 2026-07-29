@@ -64,6 +64,23 @@ class TransactionalMutationTest extends TestCase
         $this->assertSame(20, $second->fresh()->order);
     }
 
+    public function test_step_reordering_applies_the_page_offset(): void
+    {
+        $first = $this->createStep('First', 10);
+        $second = $this->createStep('Second', 20);
+
+        $this->postJson('/api/admin/steps/'.$this->project->id.'/updateorder', [
+            'offset' => 25,
+            'order' => [
+                ['id' => $second->id],
+                ['id' => $first->id],
+            ],
+        ])->assertOk();
+
+        $this->assertSame(25, $second->fresh()->order);
+        $this->assertSame(26, $first->fresh()->order);
+    }
+
     public function test_selenium_import_creates_all_records_together(): void
     {
         $this->postJson('/api/admin/importtest', [

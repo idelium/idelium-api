@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Models\Costumer;
+use App\Models\Environment;
+use App\Models\Plugin;
 use App\Models\Project;
 use App\Models\Role;
 use App\Models\Step;
@@ -80,6 +82,54 @@ class EnterpriseGridApiTest extends TestCase
             ->assertJsonCount(3)
             ->assertJsonPath('0.name', 'FIRST')
             ->assertJsonMissingPath('meta');
+    }
+
+    public function test_environment_grid_is_bounded_and_tenant_scoped(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        Environment::forceCreate([
+            'code' => 'production',
+            'description' => 'Production browser',
+            'config' => json_encode([]),
+            'idProject' => $project->id,
+            'idCostumer' => $customer->id,
+        ]);
+        [, , $otherProject] = $this->createTenant('second');
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/environments/'.$project->id.'?page=1&pageSize=10&search=production&sort=code&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.code', 'production')
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonMissingPath('data.0.config');
+        $this->getJson(
+            '/api/admin/environments/'.$otherProject->id.'?page=1&pageSize=10'
+        )->assertNotFound();
+    }
+
+    public function test_plugin_grid_is_bounded_without_exposing_source_code(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user, $project] = $this->createTenant('first');
+        Plugin::forceCreate([
+            'name' => 'checkout_plugin',
+            'description' => 'Checkout helper',
+            'code' => json_encode(['print("safe")']),
+            'idProject' => $project->id,
+            'idCostumer' => $customer->id,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $this->getJson(
+            '/api/admin/plugins/'.$project->id.'?page=1&pageSize=10&search=checkout&sort=name&direction=asc'
+        )->assertOk()
+            ->assertJsonPath('data.0.name', 'checkout_plugin')
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonMissingPath('data.0.code');
     }
 
     public function test_projects_grid_supports_server_side_search_filter_sort_and_pagination(): void

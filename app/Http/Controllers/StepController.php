@@ -86,6 +86,7 @@ class StepController extends Controller
         $this->tenantResources->project($request->user(), $idProject);
 
         DB::transaction(function () use ($request, $idProject) {
+            $offset = $request->integer('offset');
             foreach ($request->input('order') as $position => $stepObject) {
                 $step = $this->tenantResources->resource(
                     $request->user(),
@@ -94,7 +95,7 @@ class StepController extends Controller
                     $stepObject['id'],
                     true
                 );
-                $step->order = $position;
+                $step->order = $offset + $position;
                 $step->save();
             }
         });

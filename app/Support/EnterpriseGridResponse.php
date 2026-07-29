@@ -16,6 +16,7 @@ class EnterpriseGridResponse
         string $defaultDirection,
         array $searchColumns = [],
         array $filterColumns = [],
+        ?callable $transform = null,
     ) {
         $this->applySearch($request, $query, $searchColumns);
         $this->applyFilters($request, $query, $filterColumns);
@@ -36,7 +37,9 @@ class EnterpriseGridResponse
         $query->orderBy($sortMap[$sort], $direction);
 
         if (! $request->filled('page') && ! $request->filled('pageSize')) {
-            return $query->get();
+            $rows = $query->get();
+
+            return $transform === null ? $rows : $rows->map($transform);
         }
 
         $pageSize = min(max((int) $request->query('pageSize', 25), 1), 100);
@@ -44,7 +47,9 @@ class EnterpriseGridResponse
         $paginator = $query->paginate($pageSize, ['*'], 'page', $page);
 
         return response()->json([
-            'data' => $paginator->items(),
+            'data' => $transform === null
+                ? $paginator->items()
+                : array_map($transform, $paginator->items()),
             'meta' => [
                 'page' => $paginator->currentPage(),
                 'pageSize' => $paginator->perPage(),

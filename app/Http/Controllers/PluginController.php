@@ -7,6 +7,7 @@ use App\Http\Requests\UpdatePluginRequest;
 use App\Models\Plugin;
 use App\Services\PluginManifestService;
 use App\Services\TenantResourceService;
+use App\Support\EnterpriseGridResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -21,20 +22,27 @@ class PluginController extends Controller
     {
         $this->tenantResources->project($request->user(), $idProject);
 
-        return Plugin::select('id', 'name', 'description', 'code')->where(
-            'idProject',
-            $idProject
-        )->where(
-            'idCostumer',
-            $request->user()->idCostumer
-        )->get()->map(function (Plugin $plugin) {
-            return [
-                'id' => $plugin->id,
-                'name' => $plugin->name,
-                'description' => $plugin->description,
-                ...$this->pluginManifests->metadata($plugin),
-            ];
-        });
+        $query = Plugin::select('id', 'name', 'description', 'code')
+            ->where('idProject', $idProject)
+            ->where('idCostumer', $request->user()->idCostumer);
+
+        return app(EnterpriseGridResponse::class)->build(
+            $request,
+            $query,
+            ['id', 'name', 'description', 'created_at', 'updated_at'],
+            'created_at',
+            'asc',
+            ['name', 'description'],
+            ['id', 'name'],
+            function (Plugin $plugin) {
+                return [
+                    'id' => $plugin->id,
+                    'name' => $plugin->name,
+                    'description' => $plugin->description,
+                    ...$this->pluginManifests->metadata($plugin),
+                ];
+            },
+        );
     }
 
     public function store(StorePluginRequest $request)
