@@ -97,5 +97,58 @@ class ImportTestController extends Controller
                 ]);
             }
         }
+
+        if ($this->isPostmanPayload($stepImported)
+            && ! $this->containsExecutablePostmanCollection($stepImported)) {
+            throw ValidationException::withMessages([
+                'import' => 'Every imported Postman step must include a postman_collection action with a collection payload.',
+            ]);
+        }
+    }
+
+    private function containsExecutablePostmanCollection(object $stepImported): bool
+    {
+        foreach ($stepImported->steps as $action) {
+            if ($this->isPostmanPayload($action)
+                && isset($action->collection)
+                && $this->isPostmanCollectionPayload($action->collection)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isPostmanPayload(mixed $payload): bool
+    {
+        if (! is_object($payload)) {
+            return false;
+        }
+
+        foreach (['editorType', 'runtime', 'stepType', 'type', 'actionType'] as $field) {
+            if (isset($payload->{$field})
+                && is_string($payload->{$field})
+                && str_contains(strtolower($payload->{$field}), 'postman')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isPostmanCollectionPayload(mixed $payload): bool
+    {
+        if (! is_object($payload)) {
+            return false;
+        }
+
+        if (isset($payload->collection) && is_object($payload->collection)) {
+            return $this->isPostmanCollectionPayload($payload->collection);
+        }
+
+        return isset($payload->info)
+            && is_object($payload->info)
+            && isset($payload->item)
+            && is_array($payload->item);
     }
 }

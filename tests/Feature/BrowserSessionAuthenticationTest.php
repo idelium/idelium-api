@@ -64,6 +64,26 @@ class BrowserSessionAuthenticationTest extends TestCase
         $this->assertSame('lax', config('session.same_site'));
     }
 
+    public function test_login_supports_the_local_vite_development_origin(): void
+    {
+        config([
+            'sanctum.stateful' => [
+                'localhost',
+                'localhost:5173',
+                '127.0.0.1',
+                '127.0.0.1:5173',
+            ],
+        ]);
+
+        $this->withHeader('Origin', 'http://localhost:5173')
+            ->postJson('/api/login', $this->credentials())
+            ->assertOk()
+            ->assertJsonPath('authenticated', true)
+            ->assertCookie(config('session.cookie'));
+
+        $this->assertAuthenticatedAs($this->user);
+    }
+
     public function test_login_rejects_invalid_credentials_without_issuing_a_token(): void
     {
         $this->withHeader('Origin', 'https://localhost')

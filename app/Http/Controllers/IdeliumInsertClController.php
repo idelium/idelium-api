@@ -85,6 +85,10 @@ class IdeliumInsertClController extends Controller
         $this->validate($request, [
             'testId' => 'required|integer',
             'status' => 'required|integer',
+            'postmanData' => [
+                'nullable',
+                'array',
+            ],
         ]);
 
         $test = PerformedTest::where('id', $request->input('testId'))
@@ -94,6 +98,13 @@ class IdeliumInsertClController extends Controller
             return response()->json(['message' => self::INVALID_DETAILS], 404);
         }
         $test->status = $request->input('status');
+        if ($request->has('postmanData')) {
+            $postmanData = $request->input('postmanData');
+            $test->postmanData = $postmanData === null
+                ? null
+                : app(TestToolResultPayloadPolicy::class)
+                    ->redactJsonString(json_encode($postmanData) ?: '[]');
+        }
         $test->save();
 
         return response()->json([

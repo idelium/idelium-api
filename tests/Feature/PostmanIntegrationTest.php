@@ -119,6 +119,55 @@ class PostmanIntegrationTest extends TestCase
             ->assertJsonPath('0.testCycleDoneId', $secondRun->id);
     }
 
+    public function test_cli_postman_data_is_returned_with_performed_test_results(): void
+    {
+        Role::forceCreate(['id' => 3, 'name' => 'user']);
+        [$customer, $user] = $this->createTenant('first');
+        [, $secondUser] = $this->createTenant('second');
+        $hierarchy = $this->createResultParents($customer);
+
+        $postmanData = [[
+            'name' => 'Create payload',
+            'method' => 'POST',
+            'url' => 'https://postman-echo.com/post?api_key=secret',
+            'status' => 200,
+            'time' => 140,
+            'response' => '{"message":"ok"}',
+            'passed' => true,
+            'assertions' => [
+                ['name' => 'status', 'passed' => true, 'message' => 'Status matched.'],
+            ],
+        ]];
+
+        $this->withHeader('Idelium-Key', $customer->apiKey)
+            ->putJson('/api/ideliumcl/test', [
+                'testId' => $hierarchy['performedTest']->id,
+                'status' => 1,
+                'postmanData' => $postmanData,
+            ])->assertOk();
+
+        Sanctum::actingAs($user);
+        $encodedPostmanData = $this->getJson(
+            '/api/admin/testsperfomed/'.$hierarchy['performedCycle']->id
+        )->assertOk()
+            ->assertJsonCount(1)
+            ->json('0.postmanData');
+
+        $decodedPostmanData = json_decode($encodedPostmanData, true);
+        $this->assertSame('Create payload', $decodedPostmanData[0]['name']);
+        $this->assertSame('POST', $decodedPostmanData[0]['method']);
+        $this->assertStringContainsString(
+            'api_key=%5BREDACTED%5D',
+            $decodedPostmanData[0]['url']
+        );
+        $this->assertSame('{"message":"ok"}', $decodedPostmanData[0]['response']);
+
+        Sanctum::actingAs($secondUser);
+        $this->getJson('/api/admin/testsperfomed/'.$hierarchy['performedCycle']->id)
+            ->assertOk()
+            ->assertExactJson([]);
+    }
+
     public function test_performed_test_cycles_support_tenant_scoped_pagination(): void
     {
         Role::forceCreate(['id' => 3, 'name' => 'user']);

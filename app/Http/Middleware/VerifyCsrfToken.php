@@ -12,7 +12,7 @@ class VerifyCsrfToken extends Middleware
      * @var array
      */
     protected $except = [
-        'https://localhost/api/login',
-        'https://service.idelium.io/api/login',
+        'api/login',
+        'https://service.idelium.org/api/login',
     ];
 }

@@ -160,6 +160,70 @@ class TransactionalMutationTest extends TestCase
         $this->assertDatabaseCount('tests', 0);
     }
 
+    public function test_idelium_test_import_rejects_postman_steps_without_collection_actions(): void
+    {
+        $this->postJson('/api/admin/importtest', [
+            'name' => 'Imported Postman test',
+            'description' => 'Imported Postman test',
+            'idProject' => $this->project->id,
+            'import' => json_encode([
+                [
+                    'name' => 'Postman',
+                    'editorType' => 'postman',
+                    'steps' => [
+                        ['stepType' => 'postman_collection'],
+                    ],
+                ],
+            ]),
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['import']);
+
+        $this->assertDatabaseCount('steps', 0);
+        $this->assertDatabaseCount('tests', 0);
+    }
+
+    public function test_idelium_test_import_accepts_postman_collection_actions(): void
+    {
+        $this->postJson('/api/admin/importtest', [
+            'name' => 'Imported Postman test',
+            'description' => 'Imported Postman test',
+            'idProject' => $this->project->id,
+            'import' => json_encode([
+                [
+                    'name' => 'Postman',
+                    'editorType' => 'postman',
+                    'steps' => [
+                        [
+                            'stepType' => 'postman_collection',
+                            'runtime' => 'postman_auto',
+                            'collection' => [
+                                'collection' => [
+                                    'info' => ['name' => 'Postman Echo'],
+                                    'item' => [
+                                        [
+                                            'name' => 'GET Request',
+                                            'request' => [
+                                                'method' => 'GET',
+                                                'url' => 'https://postman-echo.com/get',
+                                            ],
+                                        ],
+                                    ],
+                                ],
+                                'environment' => null,
+                            ],
+                        ],
+                    ],
+                ],
+            ]),
+        ])->assertOk()->assertExactJson(['status' => 'ok']);
+
+        $step = Step::firstOrFail();
+        $config = json_decode($step->config, true);
+        $this->assertSame('postman_collection', $config['steps'][0]['stepType']);
+        $this->assertSame('Postman Echo', $config['steps'][0]['collection']['collection']['info']['name']);
+        $this->assertDatabaseCount('tests', 1);
+    }
+
     public function test_project_deletion_removes_the_complete_result_hierarchy(): void
     {
         $step = $this->createStep('Recorded step', 1);

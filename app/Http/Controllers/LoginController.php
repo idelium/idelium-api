@@ -54,7 +54,9 @@ class LoginController extends BaseController
         }
 
         Auth::login($user);
-        $request->session()->regenerate();
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         return response()->json([
             'authenticated' => true,
