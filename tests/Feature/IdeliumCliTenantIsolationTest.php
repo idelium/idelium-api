@@ -206,6 +206,46 @@ class IdeliumCliTenantIsolationTest extends TestCase
         ]);
     }
 
+    public function test_customer_cannot_finalize_another_customer_performed_cycle(): void
+    {
+        $performedCycle = $this->createPerformedTestCycle($this->secondCostumer);
+
+        $response = $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
+            ->putJson('/api/ideliumcl/testcycle', [
+                'testCycleId' => $performedCycle->id,
+                'status' => 2,
+            ]);
+
+        $response
+            ->assertNotFound()
+            ->assertExactJson(['message' => 'Invalid details']);
+        $this->assertDatabaseHas('performed_test_cycles', [
+            'id' => $performedCycle->id,
+            'status' => 0,
+            'idCostumer' => $this->secondCostumer->id,
+        ]);
+    }
+
+    public function test_customer_can_finalize_own_performed_cycle(): void
+    {
+        $performedCycle = $this->createPerformedTestCycle($this->firstCostumer);
+
+        $response = $this->withHeader('Idelium-Key', $this->firstCostumer->apiKey)
+            ->putJson('/api/ideliumcl/testcycle', [
+                'testCycleId' => $performedCycle->id,
+                'status' => 2,
+            ]);
+
+        $response
+            ->assertOk()
+            ->assertExactJson(['idCycle' => $performedCycle->id]);
+        $this->assertDatabaseHas('performed_test_cycles', [
+            'id' => $performedCycle->id,
+            'status' => 2,
+            'idCostumer' => $this->firstCostumer->id,
+        ]);
+    }
+
     public function test_customer_cannot_update_another_customer_performed_step(): void
     {
         $performedCycle = $this->createPerformedTestCycle($this->secondCostumer);

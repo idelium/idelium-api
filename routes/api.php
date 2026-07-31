@@ -452,6 +452,8 @@ Route::middleware('idelium.key')->prefix('ideliumcl')->group(function () {
 
     Route::post('testcycle', [IdeliumInsertClController::class, 'createFolder'])
         ->name('cl.createFolder');
+    Route::put('testcycle', [IdeliumInsertClController::class, 'updateFolder'])
+        ->name('cl.updateFolder');
     Route::post('test', [IdeliumInsertClController::class, 'createTest'])
         ->name('cl.createTest');
     Route::put('test', [IdeliumInsertClController::class, 'updateTest'])

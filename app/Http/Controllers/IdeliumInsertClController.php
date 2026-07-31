@@ -45,6 +45,29 @@ class IdeliumInsertClController extends Controller
         ], 200);
     }
 
+    public function updateFolder(Request $request)
+    {
+        $customer = $this->ideliumCustomer($request);
+        $this->validate($request, [
+            'testCycleId' => 'required|integer',
+            'status' => 'required|integer|in:1,2',
+        ]);
+
+        $testCycle = PerformedTestCycle::where('id', $request->input('testCycleId'))
+            ->where('idCostumer', $customer->id)
+            ->first();
+        if ($testCycle === null) {
+            return response()->json(['message' => self::INVALID_DETAILS], 404);
+        }
+
+        $testCycle->status = $request->input('status');
+        $testCycle->save();
+
+        return response()->json([
+            'idCycle' => $testCycle->id,
+        ], 200);
+    }
+
     public function createTest(Request $request)
     {
         $customer = $this->ideliumCustomer($request);
