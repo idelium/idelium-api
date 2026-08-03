@@ -22,6 +22,17 @@ class IdeliumInsertClController extends Controller
         $customer = $this->ideliumCustomer($request);
         $this->validate($request, [
             'testCycleId' => 'required|integer',
+            'executionContext' => 'nullable|array',
+            'executionContext.environment' => 'nullable|string|max:128',
+            'executionContext.environmentName' => 'nullable|string|max:255',
+            'executionContext.browser' => 'nullable|string|max:64',
+            'executionContext.device' => 'nullable|string|max:128',
+            'executionContext.deviceName' => 'nullable|string|max:128',
+            'executionContext.deviceType' => 'nullable|string|max:64',
+            'executionContext.platformName' => 'nullable|string|max:128',
+            'executionContext.platformVersion' => 'nullable|string|max:128',
+            'executionContext.browserVersion' => 'nullable|string|max:128',
+            'executionContext.runtime' => 'nullable|string|max:64',
         ]);
 
         $testCycleExists = TestCycle::where('id', $request->input('testCycleId'))
@@ -37,6 +48,9 @@ class IdeliumInsertClController extends Controller
         $testCycle->testCycleId = $request->input('testCycleId');
         $testCycle->date = $now;
         $testCycle->status = 0;
+        $testCycle->executionContext = $request->has('executionContext')
+            ? $this->safeExecutionContext($request->input('executionContext'))
+            : null;
         $testCycle->idCostumer = $customer->id;
         $testCycle->save();
 
@@ -209,5 +223,28 @@ class IdeliumInsertClController extends Controller
         return response()->json([
             'idStep' => $step->id,
         ], 200);
+    }
+
+    private function safeExecutionContext(array $context): array
+    {
+        $allowedKeys = [
+            'environment',
+            'environmentName',
+            'browser',
+            'device',
+            'deviceName',
+            'deviceType',
+            'platformName',
+            'platformVersion',
+            'browserVersion',
+            'runtime',
+        ];
+
+        return collect($context)
+            ->only($allowedKeys)
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => is_scalar($value) ? (string) $value : null)
+            ->filter(fn ($value) => $value !== null)
+            ->all();
     }
 }

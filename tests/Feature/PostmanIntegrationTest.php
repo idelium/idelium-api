@@ -191,6 +191,12 @@ class PostmanIntegrationTest extends TestCase
             'testCycleId' => $hierarchy['testCycle']->id,
             'date' => now(),
             'status' => 1,
+            'executionContext' => [
+                'environment' => 'demo',
+                'browser' => 'firefox',
+                'device' => 'Pixel 8',
+                'platformName' => 'linux',
+            ],
             'idCostumer' => $customer->id,
         ]);
 
@@ -200,6 +206,8 @@ class PostmanIntegrationTest extends TestCase
             '/api/admin/testcyclesperfomed/'.$hierarchy['testCycle']->id.'?page=1&perPage=1&status=1&sort=date&direction=desc'
         )->assertOk()
             ->assertJsonPath('data.0.id', $thirdRun->id)
+            ->assertJsonPath('data.0.executionContext.environment', 'demo')
+            ->assertJsonPath('data.0.executionContext.browser', 'firefox')
             ->assertJsonPath('meta.pagination.page', 1)
             ->assertJsonPath('meta.pagination.perPage', 1)
             ->assertJsonPath('meta.pagination.total', 2)

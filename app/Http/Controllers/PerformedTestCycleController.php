@@ -16,6 +16,7 @@ class PerformedTestCycleController extends Controller
             'testCycleId',
             'date',
             'status',
+            'executionContext',
             'updated_at',
             'created_at',
         ])->where('testCycleId', $id)

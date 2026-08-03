@@ -426,6 +426,16 @@ class IdeliumCliTenantIsolationTest extends TestCase
             $this->firstCostumer->apiKey
         )->postJson('/api/ideliumcl/testcycle', [
             'testCycleId' => $testCycle->id,
+            'executionContext' => [
+                'environment' => 'demo',
+                'environmentName' => 'Demo',
+                'browser' => 'firefox',
+                'browserVersion' => 'stable',
+                'device' => 'Pixel 8',
+                'platformName' => 'linux',
+                'platformVersion' => '6.10',
+                'seleniumGridUrl' => 'https://grid.example.invalid',
+            ],
         ])->assertOk();
         $performedCycleId = $cycleResponse->json('idCycle');
 
@@ -456,6 +466,12 @@ class IdeliumCliTenantIsolationTest extends TestCase
             'testCycleId' => $testCycle->id,
             'idCostumer' => $this->firstCostumer->id,
         ]);
+        $storedContext = PerformedTestCycle::findOrFail($performedCycleId)
+            ->executionContext;
+        $this->assertSame('demo', $storedContext['environment']);
+        $this->assertSame('firefox', $storedContext['browser']);
+        $this->assertSame('Pixel 8', $storedContext['device']);
+        $this->assertArrayNotHasKey('seleniumGridUrl', $storedContext);
         $this->assertDatabaseHas('performed_tests', [
             'id' => $performedTestId,
             'testCycleDoneId' => $performedCycleId,
