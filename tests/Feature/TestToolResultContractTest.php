@@ -97,6 +97,17 @@ class TestToolResultContractTest extends TestCase
         $this->postPerformedStep($appiumPayload, 'seleniumOrAppium')->assertOk();
     }
 
+    public function test_accepts_dsl_performed_step_type(): void
+    {
+        $idStep = $this->postPerformedStep([], 'dsl')->assertOk()->json('idStep');
+
+        $this->assertDatabaseHas('performed_steps', [
+            'id' => $idStep,
+            'type' => 'dsl',
+            'idCostumer' => $this->firstCustomer->id,
+        ]);
+    }
+
     public function test_accepts_versioned_bidi_artifacts_and_redacts_tenant_scoped_reads(): void
     {
         $payload = [

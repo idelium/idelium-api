@@ -83,6 +83,10 @@ malformed AST roots, empty AST test sets, oversized DSL source payloads, and
 fields outside the declared schema. Project ownership validation still scopes
 every write to the authenticated tenant before persistence.
 
+Performed DSL executions are stored with performed-step type `dsl`. Their
+result payload remains backward-compatible with the legacy result shape until a
+versioned DSL result schema is introduced.
+
 ## Appium
 
 Appium steps are stored with the same step/test/cycle model used by Selenium.

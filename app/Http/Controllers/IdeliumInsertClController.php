@@ -153,7 +153,7 @@ class IdeliumInsertClController extends Controller
                 new TestToolSchemaPayload('result'),
                 new TestToolResultArtifactPolicy,
             ],
-            'type' => 'required|string|in:selenium,seleniumOrAppium,postman',
+            'type' => 'required|string|in:selenium,seleniumOrAppium,postman,dsl',
         ]);
 
         $performedTestCycleExists = PerformedTestCycle::where(
